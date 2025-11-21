@@ -4,6 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProyectoModule } from './proyecto/proyecto.module';
+import { AreasResponsablesModule } from './areasResponsables/areas-responsables.module';
 
 @Module({
   imports: [
@@ -18,6 +19,10 @@ import { ProyectoModule } from './proyecto/proyecto.module';
         uri: configService.get<string>('MONGO_URI'),
       }),
     }),
+
+    //Módulos 
+    AreasResponsablesModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],
