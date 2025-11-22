@@ -10,7 +10,7 @@ import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { validatePasswordStrength } from './helpers/password.validator';
 import { PaginationResponseUserDto } from './dto/pag-response-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Area } from 'src/areasResponsables/schemas/area.schema';
 import { UserDocument } from './schemas/user.schema';
 
@@ -86,6 +86,7 @@ export class UsersService implements IUsersService {
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<Omit<UserDocument, 'password'> | null> {
     const existing = await this.repository.findRawById(userId);
     if (!existing) throw new BadRequestException('Usuario no encontrado');
+    if (existing.deletedAt) throw new BadRequestException('No se puede modificar un usuario eliminado');
 
     if (dto.password) {
       validatePasswordStrength(dto.password, existing.email, existing.nombre, existing.apellido);
@@ -98,6 +99,11 @@ export class UsersService implements IUsersService {
       }
     }
 
+    if (dto.email && dto.email !== existing.email) {
+      const emailTaken = await this.repository.findByEmail(dto.email);
+      if (emailTaken) throw new ConflictException('El email ya está registrado');
+    }
+
     const updated = await this.repository.update(userId, dto);
     return this.sanitize(updated);
   }
@@ -107,16 +113,29 @@ export class UsersService implements IUsersService {
 
     const existing = await this.repository.findRawById(userId);
     if (!existing) throw new BadRequestException('Usuario no encontrado');
+    if (existing.deletedAt) throw new BadRequestException('No se puede modificar un usuario eliminado');
 
     if (dto.password) {
       validatePasswordStrength(dto.password, existing.email, existing.nombre, existing.apellido);
     }
 
     if (dto.areaIds) {
-      for (const areaId of dto.areaIds) {
-        const exists = await this.areaModel.findById(areaId);
-        if (!exists) throw new BadRequestException(`Área no encontrada: ${areaId}`);
+      if (dto.areaIds.length === 0) {
+        throw new BadRequestException('Un staff debe tener al menos un área asignada');
       }
+
+    for (const areaId of dto.areaIds) {
+      if (!Types.ObjectId.isValid(areaId)) {
+        throw new BadRequestException(`Área inválida: ${areaId}`);
+      }
+      const exists = await this.areaModel.findById(areaId);
+      if (!exists) throw new BadRequestException(`Área no encontrada: ${areaId}`);
+    }
+    }
+
+    if (dto.email && dto.email !== existing.email) {
+      const emailTaken = await this.repository.findByEmail(dto.email);
+      if (emailTaken) throw new ConflictException('El email ya está registrado');
     }
 
     const updated = await this.repository.update(userId, dto);

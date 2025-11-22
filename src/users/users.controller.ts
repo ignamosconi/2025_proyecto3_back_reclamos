@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Patch, Get, Param, Inject, Query } from '@nestjs/common';
+import { Controller, Post, Body, Patch, Get, Param, Inject, Query, Delete } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
 import { IUsersController } from './interfaces/users.controller.interface';
 import { CreateClientDto } from './dto/create-client.dto';
@@ -108,7 +108,7 @@ export class UsersController implements IUsersController {
     return this.service.findById(userId);
   }
 
-  @Patch(':userId')
+  @Delete(':userId')
   @ApiOperation({ summary: 'Eliminar un usuario (soft delete)' })
   @ApiParam({ name: 'userId', type: String })
   @ApiResponse({ status: 200, description: 'Usuario eliminado', type: UserResponseDto })
