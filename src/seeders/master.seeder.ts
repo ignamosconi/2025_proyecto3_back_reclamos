@@ -1,28 +1,29 @@
-/*
-    ESTE ARCHIVO PERMITE EJECUTAR TODOS LOS SEEDERS DEFINIDOS EN <src/seeders>
-
-    SE EJECUTA CON: npm run seed
-*/
-
+// src/seeders/master.seeder.ts
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
 import { AreasSeeder } from './areas.seeder';
 import { IAREAS_RESPONSABLES_SERVICE } from '../areasResponsables/interfaces/areas-responsables.service.interface';
 import type { IAreasResponsablesService } from '../areasResponsables/interfaces/areas-responsables.service.interface';
+import { TipoReclamoSeeder } from './tipo-reclamo.seeder';
+import { ITIPO_RECLAMO_SERVICE, ITipoReclamoService } from '../tipoReclamo/interfaces/tipo-reclamo.service.interface';
+import { AppModule } from 'src/app.module';
 
 async function runSeeders() {
   console.log('Iniciando seeders...');
   console.log('###########################################');
 
-  // Creamos una instancia de la app de Nest
+  // Levantamos solo el SeedersModule
   const app = await NestFactory.createApplicationContext(AppModule);
 
-  // Obtenemos el service desde el contenedor de Nest usando la interfaz
+  //ÁREA-RECLAMO
   const areasService = app.get<IAreasResponsablesService>(IAREAS_RESPONSABLES_SERVICE);
+  const seederAreas = new AreasSeeder(areasService);
+  await seederAreas.run();
 
-  // Creamos el seeder con el service
-  const seeder = new AreasSeeder(areasService);
-  await seeder.run();
+  //TIPO-RECLAMO
+  const tipoReclamoService = app.get<ITipoReclamoService>(ITIPO_RECLAMO_SERVICE);
+  const seederTipo = new TipoReclamoSeeder(tipoReclamoService);
+  await seederTipo.run();
+
   console.log('###########################################');
   console.log('Seeders finalizados.');
 
@@ -31,7 +32,7 @@ async function runSeeders() {
 
 runSeeders()
   .then(() => process.exit(0))
-  .catch((err) => {
+  .catch(err => {
     console.error(err);
     process.exit(1);
   });
