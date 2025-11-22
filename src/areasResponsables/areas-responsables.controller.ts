@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Inject } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { GetAreasQueryDto } from './dto/get-area-query.dto';
@@ -7,10 +7,10 @@ import { ParseObjectIdPipe } from 'src/common/pipes/objectId.pipe';
 import type { IAreasResponsablesService } from './interfaces/areas-responsables.service.interface';
 import { IAREAS_RESPONSABLES_SERVICE } from './interfaces/areas-responsables.service.interface';
 import { AreaDocument } from './schemas/area.schema';
-import { PaginationResultDto } from './dto/pagination-result.dto';
+import { PaginationAreaDto } from './dto/pagination-area.dto';
 
 @ApiTags('Áreas')
-@Controller('areas')
+@Controller('area-reclamo')
 export class AreasResponsablesController {
 
   constructor(
@@ -26,17 +26,19 @@ export class AreasResponsablesController {
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las áreas activas' })
+  @ApiOkResponse({ type: PaginationAreaDto })
   findAll(
     @Query() query: GetAreasQueryDto,
-  ): Promise<PaginationResultDto<AreaDocument>> {
+  ): Promise<PaginationAreaDto> {
     return this.service.findAll(query);
   }
 
   @Get('deleted')
   @ApiOperation({ summary: 'Obtener todas las áreas soft-deleted' })
+  @ApiOkResponse({ type: PaginationAreaDto })
   findDeleted(
     @Query() query: GetAreasQueryDto,
-  ): Promise<PaginationResultDto<AreaDocument>> {
+  ): Promise<PaginationAreaDto> {
     return this.service.findDeleted(query);
   }
 

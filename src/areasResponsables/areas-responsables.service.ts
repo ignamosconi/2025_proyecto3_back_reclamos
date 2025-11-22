@@ -5,7 +5,7 @@ import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { GetAreasQueryDto } from './dto/get-area-query.dto';
 import { AreaDocument } from './schemas/area.schema';
-import { PaginationResultDto } from './dto/pagination-result.dto';
+import { PaginationAreaDto } from './dto/pagination-area.dto';
 
 @Injectable()
 export class AreasResponsablesService {
@@ -20,11 +20,11 @@ export class AreasResponsablesService {
     return this.repository.create(dto);
   }
 
-  async findAll(query: GetAreasQueryDto): Promise<PaginationResultDto<AreaDocument>> {
+  async findAll(query: GetAreasQueryDto): Promise<PaginationAreaDto> {
     return this.repository.findAll(query);
   }
 
-  async findDeleted(query: GetAreasQueryDto): Promise<PaginationResultDto<AreaDocument>> {
+  async findDeleted(query: GetAreasQueryDto): Promise<PaginationAreaDto> {
     return this.repository.findDeleted(query);
   }
 
