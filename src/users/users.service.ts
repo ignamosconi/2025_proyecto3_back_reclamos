@@ -133,6 +133,16 @@ export class UsersService implements IUsersService {
     return this.sanitizePagination(response);
   }
 
+  async findByEmail(email: string): Promise<Omit<UserDocument, 'password'> | null> {
+    const user = await this.repository.findByEmail(email);
+    return this.sanitize(user);
+  }
+
+  async findById(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
+    const user = await this.repository.findRawById(userId);
+    return this.sanitize(user);
+  }
+
   async softDelete(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
     const user = await this.repository.softDelete(userId);
     if (!user) throw new BadRequestException(`Usuario con id ${userId} no existe`);
