@@ -7,7 +7,7 @@ import { ParseObjectIdPipe } from 'src/common/pipes/objectId.pipe';
 import type { IAreasResponsablesService } from './interfaces/areas-responsables.service.interface';
 import { IAREAS_RESPONSABLES_SERVICE } from './interfaces/areas-responsables.service.interface';
 import { AreaDocument } from './schemas/area.schema';
-import { PaginationAreaDto } from './dto/pagination-area.dto';
+import { PaginationResponseAreaDto } from './dto/pag-response-area.dto';
 
 @ApiTags('Áreas')
 @Controller('area-reclamo')
@@ -26,19 +26,19 @@ export class AreasResponsablesController {
 
   @Get()
   @ApiOperation({ summary: 'Obtener todas las áreas activas' })
-  @ApiOkResponse({ type: PaginationAreaDto })
+  @ApiOkResponse({ type: PaginationResponseAreaDto })
   findAll(
     @Query() query: GetAreasQueryDto,
-  ): Promise<PaginationAreaDto> {
+  ): Promise<PaginationResponseAreaDto> {
     return this.service.findAll(query);
   }
 
   @Get('deleted')
   @ApiOperation({ summary: 'Obtener todas las áreas soft-deleted' })
-  @ApiOkResponse({ type: PaginationAreaDto })
+  @ApiOkResponse({ type: PaginationResponseAreaDto })
   findDeleted(
     @Query() query: GetAreasQueryDto,
-  ): Promise<PaginationAreaDto> {
+  ): Promise<PaginationResponseAreaDto> {
     return this.service.findDeleted(query);
   }
 

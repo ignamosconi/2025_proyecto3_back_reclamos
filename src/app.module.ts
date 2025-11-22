@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { ProyectoModule } from './proyecto/proyecto.module';
 import { AreasResponsablesModule } from './areasResponsables/areas-responsables.module';
 import { TipoReclamoModule } from './tipoReclamo/tipo-reclamo.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -24,6 +25,8 @@ import { TipoReclamoModule } from './tipoReclamo/tipo-reclamo.module';
     //Módulos 
     AreasResponsablesModule,
     TipoReclamoModule,
+    UsersModule,
+    
 
   ],
   controllers: [AppController],
