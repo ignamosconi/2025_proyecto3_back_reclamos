@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsEnum, MinLength, MaxLength, IsArray, ArrayNotEmpty, ArrayUnique } from 'class-validator';
+import { IsEmail, IsString, IsEnum, MinLength, MaxLength, IsArray, ArrayNotEmpty, ArrayUnique, IsMongoId } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { StaffRole } from '../helpers/enum.roles';
 
@@ -23,8 +23,9 @@ export class CreateStaffDto {
   rol: StaffRole;
 
   @ApiProperty({ description: 'Áreas responsables a las que pertenece el usuario', type: [String] })
+  @IsMongoId({ each: true })
   @IsArray()
-  @ArrayNotEmpty()
+  @ArrayNotEmpty({ message: 'Un staff debe tener al menos un área asignada' })
   @ArrayUnique()
   areaIds: string[];
 

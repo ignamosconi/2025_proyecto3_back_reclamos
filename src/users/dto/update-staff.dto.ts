@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsOptional, IsString, MinLength, IsArray, ArrayUnique } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength, IsArray, ArrayUnique, IsMongoId, ArrayNotEmpty } from 'class-validator';
 import { UserRole } from '../helpers/enum.roles';
 
 export class UpdateStaffDto {
@@ -34,6 +34,7 @@ export class UpdateStaffDto {
   rol?: UserRole;
 
   @ApiProperty({ description: 'Áreas responsables asignadas al usuario', type: [String], required: false })
+  @IsMongoId({ each: true })
   @IsOptional()
   @IsArray()
   @ArrayUnique()

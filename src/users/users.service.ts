@@ -169,8 +169,12 @@ export class UsersService implements IUsersService {
   }
 
   async restore(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
-    const user = await this.repository.restore(userId);
+    const user = await this.repository.findRawById(userId);
+
     if (!user) throw new BadRequestException(`Usuario con id ${userId} no existe`);
-    return this.sanitize(user);
+    if (!user.deletedAt) throw new BadRequestException('El usuario no está eliminado');
+
+    const restoredUser = await this.repository.restore(userId);
+    return this.sanitize(restoredUser);
   }
 }
