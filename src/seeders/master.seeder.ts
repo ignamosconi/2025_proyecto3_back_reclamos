@@ -8,12 +8,12 @@ import { ITIPO_RECLAMO_SERVICE, ITipoReclamoService } from '../tipoReclamo/inter
 import { AppModule } from 'src/app.module';
 
 async function runSeeders() {
-  console.log('Iniciando seeders...');
   console.log('###########################################');
+  console.log('Iniciando seeders...');
 
   // Levantamos solo el SeedersModule
   const app = await NestFactory.createApplicationContext(AppModule);
-
+  console.log('###########################################');
   //ÁREA-RECLAMO
   const areasService = app.get<IAreasResponsablesService>(IAREAS_RESPONSABLES_SERVICE);
   const seederAreas = new AreasSeeder(areasService);
