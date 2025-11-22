@@ -21,7 +21,7 @@ export class UsersController implements IUsersController {
     return this.service.registerClient(dto);
   }
 
-  @Post('staff')
+  @Post('register-staff')
   createStaff(@Body() dto: CreateStaffDto) {
     return this.service.createStaff(dto);
   }

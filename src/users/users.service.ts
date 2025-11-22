@@ -43,10 +43,18 @@ export class UsersService implements IUsersService {
   async registerClient(dto: CreateClientDto) {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
-    if (dto.password !== dto.passwordConfirmation)
-      throw new BadRequestException('Las contraseñas no coinciden');
 
+    // Validar fuerza de la contraseña principal
     validatePasswordStrength(dto.password, dto.email, dto.nombre, dto.apellido);
+
+    // Validar que coincida con passwordConfirmation
+    if (dto.password !== dto.passwordConfirmation) {
+      throw new BadRequestException({
+        message: 'Las contraseñas no coinciden',
+        errors: ['passwordConfirmation debe ser igual a password'],
+      });
+    }
+
     const user = await this.repository.createClient(dto);
     return this.sanitize(user);
   }
@@ -54,11 +62,17 @@ export class UsersService implements IUsersService {
   async createStaff(dto: CreateStaffDto) {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
-    if (dto.password !== dto.passwordConfirmation)
-      throw new BadRequestException('Las contraseñas no coinciden');
 
     validatePasswordStrength(dto.password, dto.email, dto.nombre, dto.apellido);
 
+    if (dto.password !== dto.passwordConfirmation) {
+      throw new BadRequestException({
+        message: 'Las contraseñas no coinciden',
+        errors: ['passwordConfirmation debe ser igual a password'],
+      });
+    }
+
+    // Validar que las áreas existan
     for (const areaId of dto.areaIds) {
       const exists = await this.areaModel.findById(areaId);
       if (!exists) throw new BadRequestException(`Área no encontrada: ${areaId}`);
@@ -69,14 +83,20 @@ export class UsersService implements IUsersService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    if (dto.password) {
-      const existing = await this.repository.findRawById(userId);
-      if (!existing) throw new BadRequestException('Usuario no encontrado');
-      if (dto.password !== dto.passwordConfirmation)
-        throw new BadRequestException('Las contraseñas no coinciden');
+    const existing = await this.repository.findRawById(userId);
+    if (!existing) throw new BadRequestException('Usuario no encontrado');
 
+    if (dto.password) {
       validatePasswordStrength(dto.password, existing.email, existing.nombre, existing.apellido);
+
+      if (dto.password !== dto.passwordConfirmation) {
+        throw new BadRequestException({
+          message: 'Las contraseñas no coinciden',
+          errors: ['passwordConfirmation debe ser igual a password'],
+        });
+      }
     }
+
     const updated = await this.repository.update(userId, dto);
     return this.sanitize(updated);
   }
@@ -84,9 +104,10 @@ export class UsersService implements IUsersService {
   async updateStaff(userId: string, dto: UpdateStaffDto) {
     delete dto.passwordConfirmation;
 
+    const existing = await this.repository.findRawById(userId);
+    if (!existing) throw new BadRequestException('Usuario no encontrado');
+
     if (dto.password) {
-      const existing = await this.repository.findRawById(userId);
-      if (!existing) throw new BadRequestException('Usuario no encontrado');
       validatePasswordStrength(dto.password, existing.email, existing.nombre, existing.apellido);
     }
 
