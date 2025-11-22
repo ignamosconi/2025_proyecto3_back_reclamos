@@ -1,9 +1,10 @@
-import type { ITipoReclamoService } from '../tipoReclamo/interfaces/tipo-reclamo.service.interface';
+import type { ITipoReclamoRepository } from '../tipoReclamo/interfaces/tipo-reclamo.repository.interface';
 
 export class TipoReclamoSeeder {
-  constructor(private readonly service: ITipoReclamoService) {}
+  constructor(private readonly repo: ITipoReclamoRepository) {}
 
   async run() {
+    console.log('--- Seeding Tipo de Reclamos ---');
     const defaults = [
       { nombre: 'Reclamo Técnico', descripcion: 'Relacionado al hardware, software y tecnología en general' },
       { nombre: 'Reclamo de Servicio', descripcion: 'Problemas relacionados con servicios prestados' },
@@ -11,9 +12,9 @@ export class TipoReclamoSeeder {
     ];
 
     for (const tipo of defaults) {
-      const existing = await this.service.findByName(tipo.nombre);
+      const existing = await this.repo.findByName(tipo.nombre);
       if (!existing) {
-        await this.service.create(tipo);
+        await this.repo.create(tipo);
         console.log(`Tipo de reclamo creado: ${tipo.nombre}`);
       } else {
         console.log(`Tipo de reclamo ya existente: ${tipo.nombre}`);
