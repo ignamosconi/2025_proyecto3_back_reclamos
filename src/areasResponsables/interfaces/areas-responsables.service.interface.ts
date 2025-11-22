@@ -15,5 +15,4 @@ export interface IAreasResponsablesService {
   restore(id: string): Promise<AreaDocument | null>;
 }
 
-
 export const IAREAS_RESPONSABLES_SERVICE = 'IAreasResponsablesService';
