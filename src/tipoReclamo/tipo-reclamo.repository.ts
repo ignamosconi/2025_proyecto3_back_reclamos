@@ -6,7 +6,7 @@ import { ITipoReclamoRepository } from './interfaces/tipo-reclamo.repository.int
 import { CreateTipoReclamoDto } from './dto/create-tipo-reclamo.dto';
 import { UpdateTipoReclamoDto } from './dto/update-tipo-reclamo.dto';
 import { GetTipoReclamoQueryDto } from './dto/get-tipo-reclamo-query.dto';
-import { PaginationTipoDto } from './dto/pagination-tipo.dto';
+import { PaginationResponseTipoDto } from './dto/pag-response-tipo.dto';
 
 @Injectable()
 export class TipoReclamoRepository implements ITipoReclamoRepository {
@@ -16,7 +16,7 @@ export class TipoReclamoRepository implements ITipoReclamoRepository {
     return (await this.model.create(data)).save();
   }
 
-  async findAll(query: GetTipoReclamoQueryDto): Promise<PaginationTipoDto> {
+  async findAll(query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
     const { page = 1, limit = 10, sort = 'asc' } = query;
     const filter = { deletedAt: null };
     const total = await this.model.countDocuments(filter);
@@ -31,7 +31,7 @@ export class TipoReclamoRepository implements ITipoReclamoRepository {
     return { data, total, page, limit };
   }
 
-  async findDeleted(query: GetTipoReclamoQueryDto): Promise<PaginationTipoDto> {
+  async findDeleted(query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
     const { page = 1, limit = 10, sort = 'asc' } = query;
     const filter = { deletedAt: { $ne: null } };
     const total = await this.model.countDocuments(filter);

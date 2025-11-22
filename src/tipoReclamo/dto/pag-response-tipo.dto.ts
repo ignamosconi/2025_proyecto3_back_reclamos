@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TipoReclamo } from '../schemas/tipo-reclamo.schema';
 
-export class PaginationTipoDto {
+export class PaginationResponseTipoDto {
   @ApiProperty({ type: () => TipoReclamo, isArray: true })
   data: TipoReclamo[];
 

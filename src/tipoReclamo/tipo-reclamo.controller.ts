@@ -7,7 +7,7 @@ import { ParseObjectIdPipe } from 'src/common/pipes/objectId.pipe';
 import type { ITipoReclamoService} from './interfaces/tipo-reclamo.service.interface';
 import { ITIPO_RECLAMO_SERVICE } from './interfaces/tipo-reclamo.service.interface';
 import { TipoReclamoDocument } from './schemas/tipo-reclamo.schema';
-import { PaginationTipoDto } from './dto/pagination-tipo.dto';
+import { PaginationResponseTipoDto } from './dto/pag-response-tipo.dto';
 
 @ApiTags('Tipos de Reclamo')
 @Controller('tipo-reclamo')
@@ -25,15 +25,15 @@ export class TipoReclamoController {
 
   @Get()
   @ApiOperation({ summary: 'Obtener todos los tipos de reclamo activos' })
-  @ApiOkResponse({ type: PaginationTipoDto })
-  findAll(@Query() query: GetTipoReclamoQueryDto): Promise<PaginationTipoDto> {
+  @ApiOkResponse({ type: PaginationResponseTipoDto })
+  findAll(@Query() query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
     return this.service.findAll(query);
   }
 
   @Get('deleted')
   @ApiOperation({ summary: 'Obtener todos los tipos de reclamo soft-deleted' })
-  @ApiOkResponse({ type: PaginationTipoDto })
-  findDeleted(@Query() query: GetTipoReclamoQueryDto): Promise<PaginationTipoDto> {
+  @ApiOkResponse({ type: PaginationResponseTipoDto })
+  findDeleted(@Query() query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
     return this.service.findDeleted(query);
   }
 

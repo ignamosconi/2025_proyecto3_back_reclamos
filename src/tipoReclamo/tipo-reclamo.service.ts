@@ -5,7 +5,7 @@ import { CreateTipoReclamoDto } from './dto/create-tipo-reclamo.dto';
 import { UpdateTipoReclamoDto } from './dto/update-tipo-reclamo.dto';
 import { GetTipoReclamoQueryDto } from './dto/get-tipo-reclamo-query.dto';
 import { TipoReclamoDocument } from './schemas/tipo-reclamo.schema';
-import { PaginationTipoDto } from './dto/pagination-tipo.dto';
+import { PaginationResponseTipoDto } from './dto/pag-response-tipo.dto';
 
 @Injectable()
 export class TipoReclamoService {
@@ -20,11 +20,11 @@ export class TipoReclamoService {
     return this.repository.create(dto);
   }
 
-  async findAll(query: GetTipoReclamoQueryDto): Promise<PaginationTipoDto> {
+  async findAll(query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
     return this.repository.findAll(query);
   }
 
-  async findDeleted(query: GetTipoReclamoQueryDto): Promise<PaginationTipoDto> {
+  async findDeleted(query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
     return this.repository.findDeleted(query);
   }
 

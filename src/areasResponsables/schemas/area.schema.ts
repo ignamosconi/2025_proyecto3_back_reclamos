@@ -3,10 +3,10 @@ import { Document } from 'mongoose';
 
 @Schema({ timestamps: true })
 export class Area {
-  @Prop({ required: true, unique: true })
+  @Prop({ required: true, unique: true, maxlength: 64 })
   nombre: string;
 
-  @Prop({ required: false })
+  @Prop({ required: false, maxlength: 255 })
   descripcion?: string;
 
   @Prop({ type: Date, default: null })

@@ -1,29 +1,30 @@
 // src/seeders/master.seeder.ts
 import { NestFactory } from '@nestjs/core';
+import { AppModule } from '../app.module';
+
 import { AreasSeeder } from './areas.seeder';
-import { IAREAS_RESPONSABLES_SERVICE } from '../areasResponsables/interfaces/areas-responsables.service.interface';
-import type { IAreasResponsablesService } from '../areasResponsables/interfaces/areas-responsables.service.interface';
 import { TipoReclamoSeeder } from './tipo-reclamo.seeder';
-import { ITIPO_RECLAMO_SERVICE, ITipoReclamoService } from '../tipoReclamo/interfaces/tipo-reclamo.service.interface';
-import { AppModule } from 'src/app.module';
+import { UsersSeeder } from './users.seeder';
+
+import { IAREAS_RESPONSABLES_REPOSITORY } from '../areasResponsables/interfaces/areas-responsables.repository.interface';
+import { ITIPO_RECLAMO_REPOSITORY } from '../tipoReclamo/interfaces/tipo-reclamo.repository.interface';
+import { IUSERS_REPOSITORY } from '../users/interfaces/users.repository.interface';
 
 async function runSeeders() {
-  console.log('###########################################');
-  console.log('Iniciando seeders...');
+  console.log('Iniciando seeders con repositories...');
 
-  // Levantamos solo el SeedersModule
   const app = await NestFactory.createApplicationContext(AppModule);
+  // Repositories
+  const areasRepo = app.get(IAREAS_RESPONSABLES_REPOSITORY);
+  const tipoRepo = app.get(ITIPO_RECLAMO_REPOSITORY);
+  const usersRepo = app.get(IUSERS_REPOSITORY);
+
+  
+  // Ejecutar seeders
   console.log('###########################################');
-  //ÁREA-RECLAMO
-  const areasService = app.get<IAreasResponsablesService>(IAREAS_RESPONSABLES_SERVICE);
-  const seederAreas = new AreasSeeder(areasService);
-  await seederAreas.run();
-
-  //TIPO-RECLAMO
-  const tipoReclamoService = app.get<ITipoReclamoService>(ITIPO_RECLAMO_SERVICE);
-  const seederTipo = new TipoReclamoSeeder(tipoReclamoService);
-  await seederTipo.run();
-
+  await new AreasSeeder(areasRepo).run();
+  await new TipoReclamoSeeder(tipoRepo).run();
+  await new UsersSeeder(usersRepo, areasRepo).run();
   console.log('###########################################');
   console.log('Seeders finalizados.');
 
