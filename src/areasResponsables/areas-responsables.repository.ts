@@ -5,26 +5,51 @@ import { Area, AreaDocument } from './schemas/area.schema';
 import { IAreasResponsablesRepository } from './interfaces/areas-responsables.repository.interface';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
+import { GetAreasQueryDto } from './dto/get-area-query.dto';
+import { PaginationResultDto } from './dto/pagination-result.dto';
 
 @Injectable()
 export class AreasResponsablesRepository implements IAreasResponsablesRepository {
   constructor(@InjectModel(Area.name) private readonly model: Model<AreaDocument>) {}
 
   async create(data: CreateAreaDto): Promise<AreaDocument> {
-    const doc = new this.model(data);
-    return doc.save();
+    return (await this.model.create(data)).save();
   }
 
-  async findAll(): Promise<AreaDocument[]> {
-    return this.model.find({ deletedAt: null }).exec();
+  async findAll(query: GetAreasQueryDto): Promise<PaginationResultDto<AreaDocument>> {
+    const { page = 1, limit = 10, sort = 'asc' } = query;
+
+    const filter = { deletedAt: null };
+    const total = await this.model.countDocuments(filter);
+
+    const data = await this.model
+      .find(filter)
+      .sort({ createdAt: sort === 'asc' ? 1 : -1 }) //Ordenamos por fecha de creación
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    return { data, total, page, limit };
+  }
+
+  async findDeleted(query: GetAreasQueryDto): Promise<PaginationResultDto<AreaDocument>> {
+    const { page = 1, limit = 10, sort = 'asc' } = query;
+
+    const filter = { deletedAt: { $ne: null } };
+    const total = await this.model.countDocuments(filter);
+
+    const data = await this.model
+      .find(filter)
+      .sort({ createdAt: sort === 'asc' ? 1 : -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    return { data, total, page, limit };
   }
 
   async findOne(id: string): Promise<AreaDocument | null> {
     return this.model.findById(id).exec();
-  }
-
-  async findDeleted(): Promise<AreaDocument[]> {
-    return this.model.find({ deletedAt: { $ne: null } }).exec();
   }
 
   async update(id: string, data: UpdateAreaDto): Promise<AreaDocument | null> {
@@ -33,15 +58,8 @@ export class AreasResponsablesRepository implements IAreasResponsablesRepository
 
   async softDelete(id: string): Promise<AreaDocument | null> {
     const area = await this.model.findById(id).exec();
-
-    if (!area) {
-      throw new BadRequestException(`Área con id ${id} no existe`);
-    }
-
-    if (area.deletedAt) {
-      throw new BadRequestException(`Área "${area.nombre}" ya está borrada`);
-    }
-
+    if (!area) throw new BadRequestException(`Área con id ${id} no existe`);
+    if (area.deletedAt) throw new BadRequestException(`Área "${area.nombre}" ya está borrada.`);
     area.deletedAt = new Date();
     return area.save();
   }
