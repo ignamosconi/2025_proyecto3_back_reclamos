@@ -1,4 +1,8 @@
-// src/seeders/master.seeder.ts
+/*
+  PARA EJECUTAR EL SEEDER, CORRER EL SIGUIENTE COMANDO:
+  npm run seed
+*/
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 
