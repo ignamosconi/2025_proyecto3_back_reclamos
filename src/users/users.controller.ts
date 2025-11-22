@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Patch, Get, Param, Inject } from '@nestjs/common';
+import { Controller, Post, Body, Patch, Get, Param, Inject, Query } from '@nestjs/common';
 import { IUsersController } from './interfaces/users.controller.interface';
 import { CreateClientDto } from './dto/create-client.dto';
 import type { IUsersService } from './interfaces/users.service.interface';
@@ -37,12 +37,12 @@ export class UsersController implements IUsersController {
   }
 
   @Get()
-  findAll(@Body() query: GetUsersQueryDto) {
+  findAll(@Query() query: GetUsersQueryDto) {
     return this.service.findAll(query);
   }
 
   @Get('deleted')
-  findDeleted(@Body() query: GetUsersQueryDto) {
+  findDeleted(@Query() query: GetUsersQueryDto) {
     return this.service.findDeleted(query);
   }
 
