@@ -12,6 +12,7 @@ import { PaginationResponseUserDto } from './dto/pag-response-user.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Area } from 'src/areasResponsables/schemas/area.schema';
+import { UserDocument } from './schemas/user.schema';
 
 @Injectable()
 export class UsersService implements IUsersService {
@@ -40,7 +41,7 @@ export class UsersService implements IUsersService {
     };
   }
 
-  async registerClient(dto: CreateClientDto) {
+  async registerClient(dto: CreateClientDto): Promise<Omit<UserDocument, 'password'>> {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
 
@@ -59,7 +60,7 @@ export class UsersService implements IUsersService {
     return this.sanitize(user);
   }
 
-  async createStaff(dto: CreateStaffDto) {
+  async createStaff(dto: CreateStaffDto): Promise<Omit<UserDocument, 'password'>> {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
 
@@ -82,7 +83,7 @@ export class UsersService implements IUsersService {
     return this.sanitize(user);
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto) {
+  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<Omit<UserDocument, 'password'> | null> {
     const existing = await this.repository.findRawById(userId);
     if (!existing) throw new BadRequestException('Usuario no encontrado');
 
@@ -101,7 +102,7 @@ export class UsersService implements IUsersService {
     return this.sanitize(updated);
   }
 
-  async updateStaff(userId: string, dto: UpdateStaffDto) {
+  async updateStaff(userId: string, dto: UpdateStaffDto): Promise<Omit<UserDocument, 'password'> | null> {
     delete dto.passwordConfirmation;
 
     const existing = await this.repository.findRawById(userId);
@@ -122,23 +123,23 @@ export class UsersService implements IUsersService {
     return this.sanitize(updated);
   }
 
-  async findAll(query: GetUsersQueryDto) {
+  async findAll(query: GetUsersQueryDto): Promise<PaginationResponseUserDto> {
     const response = await this.repository.findAll(query);
     return this.sanitizePagination(response);
   }
 
-  async findDeleted(query: GetUsersQueryDto) {
+  async findDeleted(query: GetUsersQueryDto): Promise<PaginationResponseUserDto> {
     const response = await this.repository.findDeleted(query);
     return this.sanitizePagination(response);
   }
 
-  async softDelete(userId: string) {
+  async softDelete(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
     const user = await this.repository.softDelete(userId);
     if (!user) throw new BadRequestException(`Usuario con id ${userId} no existe`);
     return this.sanitize(user);
   }
 
-  async restore(userId: string) {
+  async restore(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
     const user = await this.repository.restore(userId);
     if (!user) throw new BadRequestException(`Usuario con id ${userId} no existe`);
     return this.sanitize(user);

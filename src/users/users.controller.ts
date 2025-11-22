@@ -8,6 +8,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateStaffDto } from './dto/update-staff.dto';
 import { GetUsersQueryDto } from './dto/get-users-query.dto';
 import { ParseObjectIdPipe } from '../common/pipes/objectId.pipe';
+import { UserDocument } from './schemas/user.schema';
+import { PaginationResponseUserDto } from './dto/pag-response-user.dto';
 
 @Controller('users')
 export class UsersController implements IUsersController {
@@ -17,42 +19,56 @@ export class UsersController implements IUsersController {
   ) {}
 
   @Post('register-client')
-  registerClient(@Body() dto: CreateClientDto) {
+  registerClient(@Body() dto: CreateClientDto): Promise<Omit<UserDocument, 'password'>> {
     return this.service.registerClient(dto);
   }
 
   @Post('register-staff')
-  createStaff(@Body() dto: CreateStaffDto) {
+  createStaff(@Body() dto: CreateStaffDto): Promise<Omit<UserDocument, 'password'>> {
     return this.service.createStaff(dto);
   }
 
   @Patch('profile/:userId')
-  updateProfile(@Param('userId', ParseObjectIdPipe) userId: string, @Body() dto: UpdateProfileDto) {
+  updateProfile(
+    @Param('userId', ParseObjectIdPipe) userId: string, 
+    @Body() dto: UpdateProfileDto,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     return this.service.updateProfile(userId, dto);
   }
 
   @Patch('staff/:userId')
-  updateStaff(@Param('userId', ParseObjectIdPipe) userId: string, @Body() dto: UpdateStaffDto) {
+  updateStaff(
+    @Param('userId', ParseObjectIdPipe) userId: string, 
+    @Body() dto: UpdateStaffDto,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     return this.service.updateStaff(userId, dto);
   }
 
   @Get()
-  findAll(@Query() query: GetUsersQueryDto) {
+  findAll(
+    @Query() query: GetUsersQueryDto
+  ): Promise<PaginationResponseUserDto> {
     return this.service.findAll(query);
   }
 
   @Get('deleted')
-  findDeleted(@Query() query: GetUsersQueryDto) {
+  findDeleted(
+    @Query() query: GetUsersQueryDto
+  ): Promise<PaginationResponseUserDto> {
     return this.service.findDeleted(query);
   }
 
   @Patch(':userId')
-  softDelete(@Param('userId', ParseObjectIdPipe) userId: string) {
+  softDelete(
+    @Param('userId', ParseObjectIdPipe) userId: string
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     return this.service.softDelete(userId);
   }
 
   @Patch(':userId/restore')
-  restore(@Param('userId', ParseObjectIdPipe) userId: string) {
+  restore(
+    @Param('userId', ParseObjectIdPipe) userId: string
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     return this.service.restore(userId);
   }
 }
