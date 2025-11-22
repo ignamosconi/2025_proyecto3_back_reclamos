@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProyectoModule } from './proyecto/proyecto.module';
 import { AreasResponsablesModule } from './areasResponsables/areas-responsables.module';
+import { TipoReclamoModule } from './tipoReclamo/tipo-reclamo.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AreasResponsablesModule } from './areasResponsables/areas-responsables.
 
     //Módulos 
     AreasResponsablesModule,
+    TipoReclamoModule,
 
   ],
   controllers: [AppController],

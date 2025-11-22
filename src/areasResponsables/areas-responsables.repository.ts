@@ -6,7 +6,7 @@ import { IAreasResponsablesRepository } from './interfaces/areas-responsables.re
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { GetAreasQueryDto } from './dto/get-area-query.dto';
-import { PaginationResultDto } from './dto/pagination-result.dto';
+import { PaginationAreaDto } from './dto/pagination-area.dto';
 
 @Injectable()
 export class AreasResponsablesRepository implements IAreasResponsablesRepository {
@@ -16,7 +16,7 @@ export class AreasResponsablesRepository implements IAreasResponsablesRepository
     return (await this.model.create(data)).save();
   }
 
-  async findAll(query: GetAreasQueryDto): Promise<PaginationResultDto<AreaDocument>> {
+  async findAll(query: GetAreasQueryDto):Promise<PaginationAreaDto> {
     const { page = 1, limit = 10, sort = 'asc' } = query;
 
     const filter = { deletedAt: null };
@@ -32,7 +32,7 @@ export class AreasResponsablesRepository implements IAreasResponsablesRepository
     return { data, total, page, limit };
   }
 
-  async findDeleted(query: GetAreasQueryDto): Promise<PaginationResultDto<AreaDocument>> {
+  async findDeleted(query: GetAreasQueryDto): Promise<PaginationAreaDto> {
     const { page = 1, limit = 10, sort = 'asc' } = query;
 
     const filter = { deletedAt: { $ne: null } };
