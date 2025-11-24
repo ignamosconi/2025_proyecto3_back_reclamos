@@ -83,7 +83,7 @@ export class JwtService implements IJwtService {
         return {
           accessToken: this.generateToken({
             email: payload.email,
-            rol: payload.role,
+            role: payload.role,
           }),
           refreshToken: this.generateToken(
             { email: payload.email, role: payload.role },
