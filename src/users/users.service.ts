@@ -48,7 +48,7 @@ export class UsersService implements IUsersService {
       throw new ConflictException('El email ya está registrado');
 
     // Validar fuerza de la contraseña principal
-    validatePasswordStrength(dto.password, dto.email, dto.nombre, dto.apellido);
+    validatePasswordStrength(dto.password, dto.email, dto.firstName, dto.lastName);
 
     // Validar que coincida con passwordConfirmation
     if (dto.password !== dto.passwordConfirmation) {
@@ -66,7 +66,7 @@ export class UsersService implements IUsersService {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
 
-    validatePasswordStrength(dto.password, dto.email, dto.nombre, dto.apellido);
+    validatePasswordStrength(dto.password, dto.email, dto.firstName, dto.lastName);
 
     if (dto.password !== dto.passwordConfirmation) {
       throw new BadRequestException({
@@ -91,7 +91,7 @@ export class UsersService implements IUsersService {
     if (existing.deletedAt) throw new BadRequestException('No se puede modificar un usuario eliminado');
 
     if (dto.password) {
-      validatePasswordStrength(dto.password, existing.email, existing.nombre, existing.apellido);
+      validatePasswordStrength(dto.password, existing.email, existing.firstName, existing.lastName);
 
       if (dto.password !== dto.passwordConfirmation) {
         throw new BadRequestException({
@@ -118,7 +118,7 @@ export class UsersService implements IUsersService {
     if (existing.deletedAt) throw new BadRequestException('No se puede modificar un usuario eliminado');
 
     if (dto.password) {
-      validatePasswordStrength(dto.password, existing.email, existing.nombre, existing.apellido);
+      validatePasswordStrength(dto.password, existing.email, existing.firstName, existing.lastName);
     }
 
     if (dto.areaIds) {

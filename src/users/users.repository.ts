@@ -23,11 +23,11 @@ export class UsersRepository implements IUsersRepository {
   async createClient(dto: CreateClientDto): Promise<UserDocument> {
     const hashed = await this.hash(dto.password);
     return this.model.create({
-      nombre: dto.nombre,
-      apellido: dto.apellido,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
       email: dto.email,
       password: hashed,
-      rol: ClienteRole.CLIENTE,
+      role: ClienteRole.CLIENTE,
       areas: [],
     });
   }
@@ -35,11 +35,11 @@ export class UsersRepository implements IUsersRepository {
   async createStaff(dto: CreateStaffDto): Promise<UserDocument> {
     const hashed = await this.hash(dto.password);
     return this.model.create({
-      nombre: dto.nombre,
-      apellido: dto.apellido,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
       email: dto.email,
       password: hashed,
-      rol: dto.rol,
+      role: dto.role,
       areas: dto.areaIds.map(id => new Types.ObjectId(id)),
     });
   }
@@ -53,10 +53,10 @@ export class UsersRepository implements IUsersRepository {
   }
 
   async findAll(query: GetUsersQueryDto): Promise<PaginationResponseUserDto> {
-    const { limit = 10, page = 1, sort = 'asc', rol, search } = query;
+    const { limit = 10, page = 1, sort = 'asc', role, search } = query;
 
     const filter: any = { deletedAt: null };
-    if (rol) filter.rol = rol;
+    if (role) filter.rol = role;
 
     if (search) {
       filter.$or = [

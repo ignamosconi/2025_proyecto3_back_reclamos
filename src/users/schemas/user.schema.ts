@@ -5,10 +5,10 @@ import { UserRole } from '../helpers/enum.roles';
 @Schema({ timestamps: true })
 export class User {
   @Prop({ required: true, maxlength: 255 })
-  nombre: string;
+  firstName: string;
 
   @Prop({ required: true, maxlength: 255 })
-  apellido: string;
+  lastName: string;
 
   @Prop({ required: true, unique: true, maxlength: 255 })
   email: string;
@@ -17,7 +17,7 @@ export class User {
   password: string;
 
   @Prop({ required: true, enum: UserRole, default: UserRole.CLIENTE })
-  rol: UserRole;
+  role: UserRole;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Area' }], default: [] })
   areas: Types.ObjectId[];

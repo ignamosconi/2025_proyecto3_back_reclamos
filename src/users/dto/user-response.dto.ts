@@ -8,16 +8,16 @@ export class UserResponseDto {
   _id: string;
 
   @ApiProperty()
-  nombre: string;
+  firstName: string;
 
   @ApiProperty()
-  apellido: string;
+  lastName: string;
 
   @ApiProperty()
   email: string;
 
   @ApiProperty()
-  rol: string;
+  role: string;
 
   @ApiProperty({ type: [String], description: 'IDs de las áreas asociadas' })
   areas: string[];
