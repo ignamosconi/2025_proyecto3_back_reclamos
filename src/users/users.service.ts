@@ -24,6 +24,7 @@ export class UsersService implements IUsersService {
     private readonly areaModel: Model<Area>,
   ) {}
 
+  //Sacamos el password para la respuesta
   private sanitize(user: any) {
     if (!user) return null;
     if (typeof user.toObject === 'function') {
@@ -34,6 +35,7 @@ export class UsersService implements IUsersService {
     return clean;
   }
 
+  //Sacamos el password para una respuesta paginada.
   private sanitizePagination(response: PaginationResponseUserDto) {
     return {
       ...response,
@@ -152,9 +154,9 @@ export class UsersService implements IUsersService {
     return this.sanitizePagination(response);
   }
 
-  async findByEmail(email: string): Promise<Omit<UserDocument, 'password'> | null> {
-    const user = await this.repository.findByEmail(email);
-    return this.sanitize(user);
+  //No usamos sanitize(user) acá pq este método lo usamos para el login. Si sacamos el pwd, no login.
+  async findByEmail(email: string): Promise<UserDocument | null> {
+    return await this.repository.findByEmail(email);
   }
 
   async findById(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
