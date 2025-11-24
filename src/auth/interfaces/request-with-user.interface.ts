@@ -1,6 +1,6 @@
-// ARCHIVO: request-with-user.ts
+// ARCHIVO: request-with-user.interface.ts
 import { Request } from 'express';
-import { UserEntity } from '../../users/entities/user.entity';
+import { UserDocument } from 'src/users/schemas/user.schema';
 
 /* 
     Una Request es un objeto generado por Express.js, que representa toda la petición HTTP realizada.
@@ -13,5 +13,5 @@ import { UserEntity } from '../../users/entities/user.entity';
     de ese usuario, ya que sabemos el usuario que hizo la petición con request.user.
 */
 export interface RequestWithUser extends Request {
-  user: UserEntity;
+  user: UserDocument;
 }

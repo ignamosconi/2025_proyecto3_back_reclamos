@@ -71,8 +71,6 @@ export class AuthController implements IAuthController {
       email: req.user.email,
       firstName: req.user.firstName,
       lastName: req.user.lastName,
-      address: req.user.address,
-      phone: req.user.phone,
       role: req.user.role,
     };
   }
