@@ -1,15 +1,8 @@
 //ARCHIVO: auth.service.ts
-
-import {
-  Inject,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import {Inject, Injectable, NotFoundException, UnauthorizedException} from '@nestjs/common';
 import { LoginDTO } from './dto/login.dto';
 import { TokenPairDTO } from './dto/token-pair.dto';
 import { compareSync } from 'bcrypt';
-import { UsersService } from '../users/users.service';
 import type { IJwtService } from './interfaces/jwt.service.interface';
 import { IAuthService } from './interfaces/auth.service.interface';
 import { randomBytes } from 'crypto';
