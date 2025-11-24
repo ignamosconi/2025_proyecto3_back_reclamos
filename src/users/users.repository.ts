@@ -49,7 +49,7 @@ export class UsersRepository implements IUsersRepository {
   }
 
   async findRawById(id: string): Promise<UserDocument | null> {
-    return this.model.findById(id);
+    return this.model.findById(id).populate('areas');
   }
 
   async findAll(query: GetUsersQueryDto): Promise<PaginationResponseUserDto> {
@@ -70,6 +70,7 @@ export class UsersRepository implements IUsersRepository {
 
     const data = await this.model
       .find(filter)
+      .populate('areas')
       .sort({ createdAt: sort === 'asc' ? 1 : -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -85,6 +86,7 @@ export class UsersRepository implements IUsersRepository {
     const total = await this.model.countDocuments(filter);
     const data = await this.model
       .find(filter)
+      .populate('areas')
       .skip((page - 1) * limit)
       .limit(limit);
 
@@ -107,12 +109,14 @@ export class UsersRepository implements IUsersRepository {
       delete updateData.areaIds;
     }
 
-    return this.model.findByIdAndUpdate(id, updateData, { new: true });
+    return this.model
+      .findByIdAndUpdate(id, updateData, { new: true })
+      .populate('areas');
   }
 
 
   async softDelete(id: string): Promise<UserDocument | null> {
-    const user = await this.model.findById(id);
+    const user = await this.model.findById(id).populate('areas');
     if (!user) throw new BadRequestException('Usuario no encontrado');
     if (user.deletedAt) throw new BadRequestException('El usuario ya está eliminado');
 
