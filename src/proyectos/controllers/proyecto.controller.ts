@@ -7,6 +7,7 @@ import { Proyecto, ProyectoDocument } from '../schemas/proyecto.schema';
 import { GetProyectosQueryDto } from '../dto/get-proyecto-query.dto';
 import { PaginationResponseProyectoDto } from '../dto/pag-proyecto.dto';
 import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { ParseObjectIdPipe } from 'src/common/pipes/objectId.pipe';
 
 @Controller('proyectos')
 // SIN IMPLEMENTACIÓN DE ROLES/AUTORIZACIÓN
@@ -46,6 +47,15 @@ export class ProyectosController implements IProyectosController {
     return this.proyectosService.findAll(query);
   }
 
+  @Get('deleted')
+  @ApiOperation({ summary: 'Listar proyectos soft-deleted' })
+  @ApiOkResponse({ type: PaginationResponseProyectoDto })
+  async findDeleted(
+    @Query() query: GetProyectosQueryDto
+  ): Promise<PaginationResponseProyectoDto> {
+    return this.proyectosService.findDeleted(query);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un proyecto por ID' })
   @ApiOkResponse({
@@ -55,7 +65,7 @@ export class ProyectosController implements IProyectosController {
   @ApiNotFoundResponse({
     description: 'Proyecto no encontrado',
   })
-  async findOne(@Param('id') id: string): Promise<ProyectoDocument> {
+  async findOne(@Param('id', ParseObjectIdPipe) id: string): Promise<ProyectoDocument> {
     // El servicio solo busca y lanza NotFound si no existe.
     return this.proyectosService.findById(id);
   }
@@ -74,7 +84,7 @@ export class ProyectosController implements IProyectosController {
     description: 'Datos inválidos',
   })
   async update(
-    @Param('id') id: string,
+    @Param('id', ParseObjectIdPipe) id: string,
     @Body() updateDto: UpdateProyectoDto,
   ): Promise<ProyectoDocument> {
     // El servicio se encarga de la unicidad del nombre y la actualización.
@@ -87,8 +97,18 @@ export class ProyectosController implements IProyectosController {
   @ApiNoContentResponse({
     description: 'Proyecto eliminado correctamente',
   })
-  async delete(@Param('id') id: string): Promise<void> {
+  async delete(@Param('id', ParseObjectIdPipe) id: string): Promise<void> {
     // El servicio solo realiza el soft-delete.
     await this.proyectosService.delete(id);
   }
+
+
+  @Patch(':id/restore')
+  @ApiOperation({ summary: 'Restaurar un proyecto soft-deleted' })
+  @ApiOkResponse({ type: Proyecto })
+  @ApiNotFoundResponse({ description: 'Proyecto no encontrado' })
+  async restore(@Param('id', ParseObjectIdPipe) id: string): Promise<ProyectoDocument> {
+    return this.proyectosService.restore(id);
+  }
+
 }

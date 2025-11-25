@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { CreateProyectoDto } from '../dto/create-proyecto.dto';
 import { UpdateProyectoDto } from '../dto/update-proyecto.dto';
 import { ProyectoDocument } from '../schemas/proyecto.schema';
@@ -79,66 +79,84 @@ export class ProyectosService implements IProyectosService {
     return proyecto;
   }
 
-  async update(
-    id: string,
-    data: UpdateProyectoDto,
-): Promise<ProyectoDocument> {
-    
-    // 1. Validación de unicidad si se está actualizando el nombre (Lógica existente)
-    if (data.nombre) {
-        const existing = await this.proyectoRepository.findByName(data.nombre);
-        if (existing && existing.id !== id) {
+    async update(id: string, data: UpdateProyectoDto): Promise<ProyectoDocument> {
+
+        // 0. Verificar existencia y estado antes de modificar
+        const proyecto = await this.proyectoRepository.findRawById(id);
+
+        if (!proyecto) {
+            throw new NotFoundException(`Proyecto con ID ${id} no encontrado.`);
+        }
+
+        if (proyecto.deletedAt) {
+            throw new BadRequestException('No se puede actualizar un proyecto eliminado.');
+        }
+
+        // 1. Validación de unicidad del nombre
+        if (data.nombre) {
+            const existing = await this.proyectoRepository.findByName(data.nombre);
+            if (existing && existing.id !== id) {
             throw new ConflictException(
                 `Ya existe otro proyecto activo con el nombre: ${data.nombre}`,
             );
+            }
         }
-    }
 
-    // 2. VALIDACIÓN DE INTEGRIDAD REFERENCIAL (NUEVA LÓGICA)
+        // 2. Validación de integridad referencial
 
-    // a) Validar Cliente: SOLO si 'cliente' está presente en el DTO de actualización
-    if (data.cliente) {
-        const clienteId = new Types.ObjectId(data.cliente);
-        const clienteExists = await this.userModel.exists({ 
-            _id: clienteId, 
-            //rol: 'Cliente',
-        });
-        
-        if (!clienteExists) {
+        // Cliente
+        if (data.cliente) {
+            const clienteId = new Types.ObjectId(data.cliente);
+            const clienteExists = await this.userModel.exists({ _id: clienteId });
+            if (!clienteExists) {
             throw new NotFoundException(
                 `Cliente con ID "${data.cliente}" no encontrado o no tiene el rol de Cliente.`
             );
+            }
         }
-    }
 
-    // b) Validar Área: SOLO si 'areaResponsable' está presente en el DTO de actualización
-    if (data.areaResponsable) {
-        const areaId = new Types.ObjectId(data.areaResponsable);
-        const areaExists = await this.areaModel.exists({ _id: areaId });
-        
-        if (!areaExists) {
+        // Área
+        if (data.areaResponsable) {
+            const areaId = new Types.ObjectId(data.areaResponsable);
+            const areaExists = await this.areaModel.exists({ _id: areaId });
+            if (!areaExists) {
             throw new NotFoundException(
                 `Área Responsable con ID "${data.areaResponsable}" no encontrada.`
             );
+            }
+        }
+
+        // 3. Actualizar
+        const updatedProyecto = await this.proyectoRepository.update(id, data);
+
+        if (!updatedProyecto) {
+            // Esto es un respaldo, pero en teoría no debería ocurrir ya que verificamos arriba
+            throw new NotFoundException(`Proyecto con ID ${id} no encontrado.`);
+        }
+
+        return updatedProyecto;
+    }
+
+
+    async delete(id: string): Promise<void> {
+        const deletedProyecto = await this.proyectoRepository.softDelete(id);
+
+        if (!deletedProyecto) {
+            throw new NotFoundException(`Proyecto con ID ${id} no encontrado.`);
         }
     }
 
-    // 3. Ejecución de la actualización
-    const updatedProyecto = await this.proyectoRepository.update(id, data);
-    
-    // 4. Validación de existencia del proyecto a actualizar
-    if (!updatedProyecto) {
-        throw new NotFoundException(`Proyecto con ID ${id} no encontrado.`);
+    async findDeleted(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto> {
+        return this.proyectoRepository.findDeleted(query);
     }
-    
-    return updatedProyecto;
-  }
 
-  async delete(id: string): Promise<void> {
-    const deletedProyecto = await this.proyectoRepository.softDelete(id);
+    async restore(id: string): Promise<ProyectoDocument> {
+        const restored = await this.proyectoRepository.restore(id);
 
-    if (!deletedProyecto) {
-      throw new NotFoundException(`Proyecto con ID ${id} no encontrado.`);
+        if (!restored) {
+        throw new NotFoundException(`Proyecto con ID ${id} no encontrado o no está eliminado.`);
+        }
+
+        return restored;
     }
-  }
 }

@@ -109,4 +109,51 @@ export class ProyectosRepository implements IProyectosRepository {
       )
       .exec();
   }
+
+  async findDeleted(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto> {
+    const { page = 1, limit = 10, sort, search, cliente, areaResponsable } = query;
+
+    const dbFilters: any = { deletedAt: { $ne: null } };
+
+    if (cliente) dbFilters.cliente = new Types.ObjectId(cliente);
+    if (areaResponsable) dbFilters.areaResponsable = new Types.ObjectId(areaResponsable);
+
+    if (search) {
+      dbFilters.$or = [
+        { nombre: { $regex: search, $options: 'i' } },
+        { descripcion: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const total = await this.proyectoModel.countDocuments(dbFilters);
+
+    const skip = (page - 1) * limit;
+
+    const data = await this.proyectoModel
+      .find(dbFilters)
+      .populate(this.populates)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    return { data, total, page, limit };
+  }
+
+  async restore(id: string): Promise<ProyectoDocument | null> {
+    return this.proyectoModel
+      .findOneAndUpdate(
+        { _id: id, deletedAt: { $ne: null } },
+        { deletedAt: null },
+        { new: true }
+      )
+      .populate(this.populates)
+      .exec();
+  }
+
+  async findRawById(id: string): Promise<ProyectoDocument | null> {
+    return this.proyectoModel.findById(id).exec();
+  }
+
+
 }
