@@ -15,4 +15,7 @@ export interface IProyectosController {
   update(id: string, updateDto: UpdateProyectoDto): Promise<ProyectoDocument>;
 
   delete(id: string): Promise<void>;
+
+  findDeleted(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto>;
+  restore(id: string): Promise<ProyectoDocument>;
 }
