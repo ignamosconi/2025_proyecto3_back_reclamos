@@ -6,12 +6,12 @@ export class CreateStaffDto {
   @ApiProperty({ description: 'Nombre del usuario', maxLength: 255 })
   @IsString()
   @MaxLength(255)
-  nombre: string;
+  firstName: string;
 
   @ApiProperty({ description: 'Apellido del usuario', maxLength: 255 })
   @IsString()
   @MaxLength(255)
-  apellido: string;
+  lastName: string;
 
   @ApiProperty({ description: 'Correo electrónico', maxLength: 255 })
   @IsEmail()
@@ -20,7 +20,7 @@ export class CreateStaffDto {
 
   @ApiProperty({ description: 'Rol del usuario', enum: ['Encargado', 'Gerente'] })
   @IsEnum(StaffRole)
-  rol: StaffRole;
+  role: StaffRole;
 
   @ApiProperty({ description: 'Áreas responsables a las que pertenece el usuario', type: [String] })
   @IsMongoId({ each: true })

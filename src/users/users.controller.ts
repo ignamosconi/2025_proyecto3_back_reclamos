@@ -27,6 +27,7 @@ export class UsersController implements IUsersController {
   @ApiResponse({ status: 201, description: 'Cliente creado', type: UserResponseDto })
   @ApiResponse({ status: 409, description: 'Email ya registrado' })
   registerClient(@Body() dto: CreateClientDto): Promise<Omit<UserDocument, 'password'>> {
+    console.log(`[UsersController] POST /users/register-client - Registrando cliente: ${dto.email}`);
     return this.service.registerClient(dto);
   }
 
@@ -36,6 +37,7 @@ export class UsersController implements IUsersController {
   @ApiResponse({ status: 201, description: 'Staff creado', type: UserResponseDto })
   @ApiResponse({ status: 409, description: 'Email ya registrado' })
   createStaff(@Body() dto: CreateStaffDto): Promise<Omit<UserDocument, 'password'>> {
+    console.log(`[UsersController] POST /users/register-staff - Registrando staff: ${dto.email}`);
     return this.service.createStaff(dto);
   }
 
@@ -49,6 +51,7 @@ export class UsersController implements IUsersController {
     @Param('userId', ParseObjectIdPipe) userId: string, 
     @Body() dto: UpdateProfileDto,
   ): Promise<Omit<UserDocument, 'password'> | null> {
+    console.log(`[UsersController] PATCH /users/profile/${userId} - Actualizando perfil de Cliente`);
     return this.service.updateProfile(userId, dto);
   }
 
@@ -62,6 +65,7 @@ export class UsersController implements IUsersController {
     @Param('userId', ParseObjectIdPipe) userId: string, 
     @Body() dto: UpdateStaffDto,
   ): Promise<Omit<UserDocument, 'password'> | null> {
+    console.log(`[UsersController] PATCH /users/staff/${userId} - Actualizando perfil de Staff.`);
     return this.service.updateStaff(userId, dto);
   }
 
@@ -76,6 +80,7 @@ export class UsersController implements IUsersController {
   findAll(
     @Query() query: GetUsersQueryDto
   ): Promise<PaginationResponseUserDto> {
+    console.log(`[UsersController] GET /users - Listando usuarios con query:`, query);
     return this.service.findAll(query);
   }
 
@@ -87,6 +92,7 @@ export class UsersController implements IUsersController {
   findDeleted(
     @Query() query: GetUsersQueryDto
   ): Promise<PaginationResponseUserDto> {
+    console.log(`[UsersController] GET /users/deleted - Listando usuarios eliminados con query:`,query);
     return this.service.findDeleted(query);
   }
 
@@ -96,6 +102,7 @@ export class UsersController implements IUsersController {
   @ApiResponse({ status: 200, description: 'Usuario encontrado', type: UserResponseDto })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   findByEmail(@Param('email') email: string): Promise<Omit<UserDocument, 'password'> | null> {
+    console.log(`[UsersController] GET /users/email/${email} - Buscando usuario por email`);
     return this.service.findByEmail(email);
   }
 
@@ -105,6 +112,7 @@ export class UsersController implements IUsersController {
   @ApiResponse({ status: 200, description: 'Usuario encontrado', type: UserResponseDto })
   @ApiResponse({ status: 404, description: 'Usuario no encontrado' })
   findById(@Param('userId', ParseObjectIdPipe) userId: string): Promise<Omit<UserDocument, 'password'> | null> {
+    console.log(`[UsersController] GET /users/id/${userId} - Buscando usuario por ID`);
     return this.service.findById(userId);
   }
 
@@ -116,6 +124,7 @@ export class UsersController implements IUsersController {
   softDelete(
     @Param('userId', ParseObjectIdPipe) userId: string
   ): Promise<Omit<UserDocument, 'password'> | null> {
+    console.log(`[UsersController] DELETE /users/${userId} - Soft-deleting usuario`);
     return this.service.softDelete(userId);
   }
 
@@ -127,6 +136,7 @@ export class UsersController implements IUsersController {
   restore(
     @Param('userId', ParseObjectIdPipe) userId: string
   ): Promise<Omit<UserDocument, 'password'> | null> {
+    console.log(`[UsersController] PATCH /users/${userId}/restore - Restaurando usuario`);
     return this.service.restore(userId);
   }
 }

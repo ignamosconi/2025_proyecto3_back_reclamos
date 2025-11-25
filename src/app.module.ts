@@ -8,6 +8,7 @@ import { AreasResponsablesModule } from './areasResponsables/areas-responsables.
 import { TipoReclamoModule } from './tipoReclamo/tipo-reclamo.module';
 import { UsersModule } from './users/users.module';
 import { MailerModule } from './mailer/mailer.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { MailerModule } from './mailer/mailer.module';
     TipoReclamoModule,
     UsersModule,
     MailerModule,
+    AuthModule,
 
   ],
   controllers: [AppController],
