@@ -17,6 +17,12 @@ export interface IUsersService {
   findById(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
   softDelete(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
   restore(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
+
+  
+  setResetPasswordToken(userId: string, token: string, expires: Date): Promise<void>;
+  sendPasswordResetEmail(email: string, resetLink: string): Promise<void>;
+  findByResetToken(token: string): Promise<UserDocument | null>;
+  updatePassword(userId: string, newPassword: string): Promise<void>;
 }
 
 export const IUSERS_SERVICE = 'IUsersService';

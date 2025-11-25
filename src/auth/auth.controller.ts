@@ -15,6 +15,10 @@ import { RefreshToken } from './decorators/refresh-token.decorator';
 import { IAuthController } from './interfaces/auth.controller.interface';
 import { ForgotPasswordDTO } from './dto/forgot-password.dto';
 import { ResetPasswordDTO } from './dto/reset-password.dto';
+import { RolesGuard } from './guards/roles.guard';
+import { Roles } from './decorators/roles.decorator';
+import { UserRole } from 'src/users/helpers/enum.roles';
+import { User } from 'src/users/schemas/user.schema';
 
 @ApiTags('Auth') // Agrupa en Swagger
 @Controller('auth')
@@ -59,7 +63,8 @@ export class AuthController implements IAuthController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Devuelve los datos del usuario autenticado' })
   @ApiResponse({ status: 200, description: 'Datos del usuario actual' })
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE, UserRole.ENCARGADO, UserRole.GERENTE)
   @Get('me')
   async me(@Req() req: RequestWithUser) {
     //No tiene DTO porque es de práctica.
@@ -71,6 +76,7 @@ export class AuthController implements IAuthController {
       email: req.user.email,
       firstName: req.user.firstName,
       lastName: req.user.lastName,
+      areas: req.user.areas,
       role: req.user.role,
     };
   }

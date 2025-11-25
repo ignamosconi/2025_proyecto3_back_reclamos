@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { IUsersRepository } from './interfaces/users.repository.interface';
@@ -45,7 +45,7 @@ export class UsersRepository implements IUsersRepository {
   }
 
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.model.findOne({ email });
+    return this.model.findOne({ email }).populate('areas');
   }
 
   async findRawById(id: string): Promise<UserDocument | null> {
@@ -60,8 +60,8 @@ export class UsersRepository implements IUsersRepository {
 
     if (search) {
       filter.$or = [
-        { nombre: { $regex: search, $options: 'i' } },
-        { apellido: { $regex: search, $options: 'i' } },
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
       ];
     }
@@ -126,5 +126,15 @@ export class UsersRepository implements IUsersRepository {
 
   async restore(id: string): Promise<UserDocument | null> {
     return this.model.findByIdAndUpdate(id, { deletedAt: null }, { new: true });
+  }
+
+  async findByResetToken(token: string): Promise<UserDocument | null> {
+    try {
+      return await this.model.findOne({resetPasswordToken: token});
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error al buscar usuario por token de reseteo. ' + error,
+      );
+    }
   }
 }

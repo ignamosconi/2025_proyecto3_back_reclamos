@@ -24,6 +24,13 @@ export class User {
 
   @Prop({ type: Date, default: null })
   deletedAt: Date | null;
+
+  //Token para recuperación de contraseña
+  @Prop({ type: String, default: null })
+  resetPasswordToken?: string | null;
+
+  @Prop({ type: Date, default: null })
+  resetPasswordExpires?: Date | null;
 }
 
 export type UserDocument = User & Document;

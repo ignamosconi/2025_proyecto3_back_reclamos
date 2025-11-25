@@ -13,6 +13,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Area } from 'src/areasResponsables/schemas/area.schema';
 import { UserDocument } from './schemas/user.schema';
+import { hashSync } from 'bcrypt';
+import type { IMailerService } from 'src/mailer/interfaces/mailer.service.interface';
 
 @Injectable()
 export class UsersService implements IUsersService {
@@ -22,6 +24,9 @@ export class UsersService implements IUsersService {
     
     @InjectModel('Area')
     private readonly areaModel: Model<Area>,
+
+    @Inject('IMailerService')
+    private readonly mailerService: IMailerService,
   ) {}
 
   //Sacamos el password para la respuesta
@@ -178,5 +183,40 @@ export class UsersService implements IUsersService {
 
     const restoredUser = await this.repository.restore(userId);
     return this.sanitize(restoredUser);
+  }
+
+  //Métodos para recuperación de contraseña
+  /*
+    RECUPERACIÓN CONTRASEÑA
+  */
+  async setResetPasswordToken(userId: string, token: string, expires: Date): Promise<void> {
+    await this.repository.update(userId, {
+      resetPasswordToken: token,
+      resetPasswordExpires: expires,
+    });
+  }
+
+  async findByResetToken(token: string): Promise<UserDocument | null> {
+    return this.repository.findByResetToken(token);
+  }
+
+  async updatePassword(userId: string, newPassword: string): Promise<void> {
+    await this.repository.update(userId, {
+      password: newPassword, //Lo pasamos plano pq el repository es el que hashea.
+      resetPasswordToken: null,
+      resetPasswordExpires: null,
+    });
+  }
+
+  async sendPasswordResetEmail(
+    email: string,
+    resetLink: string,
+  ): Promise<void> {
+    await this.mailerService.sendMail(
+      email,
+      'Recuperación de contraseña',
+      `<p>Para restablecer tu contraseña haz clic en el siguiente enlace:</p>
+      <a href="${resetLink}">${resetLink}</a>`,
+    );
   }
 }
