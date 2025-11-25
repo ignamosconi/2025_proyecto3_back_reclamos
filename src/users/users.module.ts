@@ -28,7 +28,7 @@ import { MailerModule } from 'src/mailer/mailer.module';
       useClass: UsersRepository 
     },
   ],
-  exports: [IUSERS_SERVICE],
+  exports: [IUSERS_SERVICE, MongooseModule],
 })
 export class UsersModule {}
 
