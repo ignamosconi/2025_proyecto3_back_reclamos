@@ -6,12 +6,12 @@ export class UpdateStaffDto {
   @ApiProperty({ description: 'Nombre del usuario', required: false })
   @IsOptional()
   @IsString()
-  nombre?: string;
+  firstName?: string;
 
   @ApiProperty({ description: 'Apellido del usuario', required: false })
   @IsOptional()
   @IsString()
-  apellido?: string;
+  lastName?: string;
 
   @ApiProperty({ description: 'Correo electrónico', required: false })
   @IsOptional()
@@ -31,7 +31,7 @@ export class UpdateStaffDto {
 
   @ApiProperty({ description: 'Rol del usuario', enum: UserRole, required: false })
   @IsOptional()
-  rol?: UserRole;
+  role?: UserRole;
 
   @ApiProperty({ description: 'Áreas responsables asignadas al usuario', type: [String], required: false })
   @IsMongoId({ each: true })

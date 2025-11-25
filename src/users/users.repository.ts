@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { IUsersRepository } from './interfaces/users.repository.interface';
@@ -23,11 +23,11 @@ export class UsersRepository implements IUsersRepository {
   async createClient(dto: CreateClientDto): Promise<UserDocument> {
     const hashed = await this.hash(dto.password);
     return this.model.create({
-      nombre: dto.nombre,
-      apellido: dto.apellido,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
       email: dto.email,
       password: hashed,
-      rol: ClienteRole.CLIENTE,
+      role: ClienteRole.CLIENTE,
       areas: [],
     });
   }
@@ -35,33 +35,33 @@ export class UsersRepository implements IUsersRepository {
   async createStaff(dto: CreateStaffDto): Promise<UserDocument> {
     const hashed = await this.hash(dto.password);
     return this.model.create({
-      nombre: dto.nombre,
-      apellido: dto.apellido,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
       email: dto.email,
       password: hashed,
-      rol: dto.rol,
+      role: dto.role,
       areas: dto.areaIds.map(id => new Types.ObjectId(id)),
     });
   }
 
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.model.findOne({ email });
+    return this.model.findOne({ email }).populate('areas');
   }
 
   async findRawById(id: string): Promise<UserDocument | null> {
-    return this.model.findById(id);
+    return this.model.findById(id).populate('areas');
   }
 
   async findAll(query: GetUsersQueryDto): Promise<PaginationResponseUserDto> {
-    const { limit = 10, page = 1, sort = 'asc', rol, search } = query;
+    const { limit = 10, page = 1, sort = 'asc', role, search } = query;
 
     const filter: any = { deletedAt: null };
-    if (rol) filter.rol = rol;
+    if (role) filter.rol = role;
 
     if (search) {
       filter.$or = [
-        { nombre: { $regex: search, $options: 'i' } },
-        { apellido: { $regex: search, $options: 'i' } },
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
       ];
     }
@@ -70,6 +70,7 @@ export class UsersRepository implements IUsersRepository {
 
     const data = await this.model
       .find(filter)
+      .populate('areas')
       .sort({ createdAt: sort === 'asc' ? 1 : -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -85,6 +86,7 @@ export class UsersRepository implements IUsersRepository {
     const total = await this.model.countDocuments(filter);
     const data = await this.model
       .find(filter)
+      .populate('areas')
       .skip((page - 1) * limit)
       .limit(limit);
 
@@ -107,12 +109,14 @@ export class UsersRepository implements IUsersRepository {
       delete updateData.areaIds;
     }
 
-    return this.model.findByIdAndUpdate(id, updateData, { new: true });
+    return this.model
+      .findByIdAndUpdate(id, updateData, { new: true })
+      .populate('areas');
   }
 
 
   async softDelete(id: string): Promise<UserDocument | null> {
-    const user = await this.model.findById(id);
+    const user = await this.model.findById(id).populate('areas');
     if (!user) throw new BadRequestException('Usuario no encontrado');
     if (user.deletedAt) throw new BadRequestException('El usuario ya está eliminado');
 
@@ -122,5 +126,15 @@ export class UsersRepository implements IUsersRepository {
 
   async restore(id: string): Promise<UserDocument | null> {
     return this.model.findByIdAndUpdate(id, { deletedAt: null }, { new: true });
+  }
+
+  async findByResetToken(token: string): Promise<UserDocument | null> {
+    try {
+      return await this.model.findOne({resetPasswordToken: token});
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Error al buscar usuario por token de reseteo. ' + error,
+      );
+    }
   }
 }

@@ -26,7 +26,7 @@ export class GetUsersQueryDto {
   @ApiPropertyOptional({ description: 'Filtrar por rol', enum: ['Cliente', 'Encargado', 'Gerente'] })
   @IsOptional()
   @IsEnum(UserRole)
-  rol?: UserRole;
+  role?: UserRole;
 
   @ApiPropertyOptional({ description: 'Buscar por nombre, apellido o email' })
   @IsOptional()

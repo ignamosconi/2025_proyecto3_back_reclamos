@@ -5,12 +5,12 @@ export class CreateClientDto {
   @ApiProperty({ description: 'Nombre del usuario', maxLength: 255 })
   @IsString()
   @MaxLength(255)
-  nombre: string;
+  firstName: string;
 
   @ApiProperty({ description: 'Apellido del usuario', maxLength: 255 })
   @IsString()
   @MaxLength(255)
-  apellido: string;
+  lastName: string;
 
   @ApiProperty({ description: 'Correo electrónico', maxLength: 255 })
   @IsEmail()

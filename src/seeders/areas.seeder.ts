@@ -8,7 +8,7 @@ export class AreasSeeder {
   constructor(private readonly repo: IAreasResponsablesRepository) {}
 
   async run() {
-    console.log('--- Seeding áreas ---');
+    console.log('--- Seeding áreas | US 6 ---');
     const defaults = [
       { nombre: 'Ventas', descripcion: 'Área encargada de ventas y clientes' },
       { nombre: 'Soporte Técnico', descripcion: 'Área encargada de soporte técnico' },

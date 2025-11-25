@@ -23,27 +23,51 @@ export class UsersSeeder {
 
     const users = [
       {
-        nombre: 'Cliente',
-        apellido: 'Test',
-        email: 'cliente@test.com',
+        firstName: 'Cliente 1',
+        lastName: 'Test 1',
+        email: 'cliente1@test.com',
         password: 'Utnfrvm123!',
-        rol: UserRole.CLIENTE,
+        role: UserRole.CLIENTE,
         areas: [],
       },
       {
-        nombre: 'Encargado',
-        apellido: 'Test',
-        email: 'encargado@test.com',
+        firstName: 'Cliente 2',
+        lastName: 'Test 2',
+        email: 'cliente2@test.com',
         password: 'Utnfrvm123!',
-        rol: StaffRole.ENCARGADO,
+        role: UserRole.CLIENTE,
+        areas: [],
+      },
+      {
+        firstName: 'Encargado 1',
+        lastName: 'Test 1',
+        email: 'encargado1@test.com',
+        password: 'Utnfrvm123!',
+        role: StaffRole.ENCARGADO,
         areas: defaultAreas,
       },
       {
-        nombre: 'Gerente',
-        apellido: 'Test',
-        email: 'gerente@test.com',
+        firstName: 'Encargado 2',
+        lastName: 'Test 2',
+        email: 'encargado2@test.com',
         password: 'Utnfrvm123!',
-        rol: StaffRole.GERENTE,
+        role: StaffRole.ENCARGADO,
+        areas: defaultAreas,
+      },
+      {
+        firstName: 'Gerente 1',
+        lastName: 'Test 1',
+        email: 'gerente1@test.com',
+        password: 'Utnfrvm123!',
+        role: StaffRole.GERENTE,
+        areas: defaultAreas,
+      },
+      {
+        firstName: 'Gerente 2',
+        lastName: 'Test 2',
+        email: 'gerente2@test.com',
+        password: 'Utnfrvm123!',
+        role: StaffRole.GERENTE,
         areas: defaultAreas,
       },
     ];
@@ -57,22 +81,22 @@ export class UsersSeeder {
         continue;
       }
 
-      if (user.rol === UserRole.CLIENTE) {
+      if (user.role === UserRole.CLIENTE) {
         await this.usersRepo.createClient({
-          nombre: user.nombre,
-          apellido: user.apellido,
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
           password: user.password,
           passwordConfirmation: user.password,
         });
       } else {
         await this.usersRepo.createStaff({
-          nombre: user.nombre,
-          apellido: user.apellido,
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
           password: user.password,
           passwordConfirmation: user.password,
-          rol: user.rol as StaffRole,
+          role: user.role as StaffRole,
           areaIds: user.areas,
         });
       }

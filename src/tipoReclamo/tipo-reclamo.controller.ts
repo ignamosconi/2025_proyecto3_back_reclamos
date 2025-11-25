@@ -20,6 +20,7 @@ export class TipoReclamoController {
   @Post()
   @ApiOperation({ summary: 'Crear un tipo de reclamo' })
   create(@Body() dto: CreateTipoReclamoDto): Promise<TipoReclamoDocument> {
+    console.log(`[TipoReclamoController] POST /tipo-reclamo - Creando tipo de reclamo: ${dto.nombre}`);
     return this.service.create(dto);
   }
 
@@ -27,6 +28,7 @@ export class TipoReclamoController {
   @ApiOperation({ summary: 'Obtener todos los tipos de reclamo activos' })
   @ApiOkResponse({ type: PaginationResponseTipoDto })
   findAll(@Query() query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
+    console.log(`[TipoReclamoController] GET /tipo-reclamo - Listando tipos de reclamo activos con query:`, query);
     return this.service.findAll(query);
   }
 
@@ -34,36 +36,42 @@ export class TipoReclamoController {
   @ApiOperation({ summary: 'Obtener todos los tipos de reclamo soft-deleted' })
   @ApiOkResponse({ type: PaginationResponseTipoDto })
   findDeleted(@Query() query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
+    console.log(`[TipoReclamoController] GET /tipo-reclamo/deleted - Listando tipos de reclamo eliminados con query:`, query);
     return this.service.findDeleted(query);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Obtener un tipo de reclamo por ID' })
   findOne(@Param('id', ParseObjectIdPipe) id: string): Promise<TipoReclamoDocument> {
+    console.log(`[TipoReclamoController] GET /tipo-reclamo/${id} - Obteniendo tipo de reclamo por ID`);
     return this.service.findOne(id);
   }
 
   @Get('name/:nombre')
   @ApiOperation({ summary: 'Obtener un tipo de reclamo por nombre' })
   findByName(@Param('nombre') nombre: string): Promise<TipoReclamoDocument | null> {
+    console.log(`[TipoReclamoController] GET /tipo-reclamo/name/${nombre} - Obteniendo tipo de reclamo por nombre`);
     return this.service.findByName(nombre);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar un tipo de reclamo por ID' })
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() dto: UpdateTipoReclamoDto): Promise<TipoReclamoDocument | null> {
+    console.log(`[TipoReclamoController] PATCH /tipo-reclamo/${id} - Actualizando tipo de reclamo con datos:`, dto);
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Soft-delete de un tipo de reclamo' })
   softDelete(@Param('id', ParseObjectIdPipe) id: string): Promise<TipoReclamoDocument | null> {
+    console.log(`[TipoReclamoController] DELETE /tipo-reclamo/${id} - Soft-deleting tipo de reclamo`);
     return this.service.softDelete(id);
   }
 
   @Patch(':id/restore')
   @ApiOperation({ summary: 'Restaurar un tipo de reclamo soft-deleted' })
   restore(@Param('id', ParseObjectIdPipe) id: string): Promise<TipoReclamoDocument | null> {
+    console.log(`[TipoReclamoController] PATCH /tipo-reclamo/${id}/restore - Restaurando tipo de reclamo`);
     return this.service.restore(id);
   }
 }

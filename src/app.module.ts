@@ -7,6 +7,8 @@ import { ProyectosModule } from './proyectos/proyecto.module';
 import { AreasResponsablesModule } from './areasResponsables/areas-responsables.module';
 import { TipoReclamoModule } from './tipoReclamo/tipo-reclamo.module';
 import { UsersModule } from './users/users.module';
+import { MailerModule } from './mailer/mailer.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -26,7 +28,9 @@ import { UsersModule } from './users/users.module';
     AreasResponsablesModule,
     TipoReclamoModule,
     UsersModule,
-    ProyectosModule
+    ProyectosModule,
+    MailerModule,
+    AuthModule,
 
   ],
   controllers: [AppController],

@@ -6,12 +6,12 @@ export class UpdateProfileDto {
   @ApiProperty({ description: 'Nombre del usuario', required: false })
   @IsOptional()
   @IsString()
-  nombre?: string;
+  firstName?: string;
 
   @ApiProperty({ description: 'Apellido del usuario', required: false })
   @IsOptional()
   @IsString()
-  apellido?: string;
+  lastName?: string;
 
   @ApiProperty({ description: 'Correo electrónico', required: false })
   @IsOptional()

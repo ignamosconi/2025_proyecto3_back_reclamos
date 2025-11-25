@@ -13,10 +13,16 @@ export interface IUsersService {
   updateStaff(userId: string, dto: UpdateStaffDto): Promise<Omit<UserDocument, 'password'> | null>;
   findAll(query: GetUsersQueryDto): Promise<PaginationResponseUserDto>;
   findDeleted(query: GetUsersQueryDto): Promise<PaginationResponseUserDto>;
-  findByEmail(email: string): Promise<Omit<UserDocument, 'password'> | null>;
+  findByEmail(email: string): Promise<UserDocument | null>;
   findById(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
   softDelete(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
   restore(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
+
+  
+  setResetPasswordToken(userId: string, token: string, expires: Date): Promise<void>;
+  sendPasswordResetEmail(email: string, resetLink: string): Promise<void>;
+  findByResetToken(token: string): Promise<UserDocument | null>;
+  updatePassword(userId: string, newPassword: string): Promise<void>;
 }
 
 export const IUSERS_SERVICE = 'IUsersService';
