@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Inject,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { CreateProyectoDto } from '../dto/create-proyecto.dto';
 import { UpdateProyectoDto } from '../dto/update-proyecto.dto';
 import { ProyectoDocument } from '../schemas/proyecto.schema';
@@ -11,7 +6,7 @@ import { IProyectosService } from './proyecto.service.interface';
 import type { IProyectosRepository } from '../repositories/proyecto.repository.interface';
 import { GetProyectosQueryDto } from '../dto/get-proyecto-query.dto';
 import { PaginationResponseProyectoDto } from '../dto/pag-proyecto.dto';
-import { Area, AreaDocument } from 'src/area/schemas/area.schema';
+import { Area, AreaDocument } from 'src/areasResponsables/schemas/area.schema';
 import { User, UserDocument } from 'src/users/schemas/user.schema';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
