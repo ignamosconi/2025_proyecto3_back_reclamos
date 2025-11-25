@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ProyectoModule } from './proyecto/proyecto.module';
+import { ProyectosModule } from './proyectos/proyecto.module';
 import { AreasResponsablesModule } from './areasResponsables/areas-responsables.module';
 import { TipoReclamoModule } from './tipoReclamo/tipo-reclamo.module';
 import { UsersModule } from './users/users.module';
@@ -14,7 +14,7 @@ import { UsersModule } from './users/users.module';
     MongooseModule.forRootAsync({
       imports: [
         ConfigModule,
-        ProyectoModule
+        ProyectosModule
       ],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -26,7 +26,7 @@ import { UsersModule } from './users/users.module';
     AreasResponsablesModule,
     TipoReclamoModule,
     UsersModule,
-    
+    ProyectosModule
 
   ],
   controllers: [AppController],

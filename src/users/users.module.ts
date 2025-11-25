@@ -20,7 +20,7 @@ import { Area, AreaSchema } from 'src/areasResponsables/schemas/area.schema';
     { provide: IUSERS_SERVICE, useClass: UsersService },
     { provide: IUSERS_REPOSITORY, useClass: UsersRepository },
   ],
-  exports: [IUSERS_SERVICE],
+  exports: [IUSERS_SERVICE, MongooseModule],
 })
 export class UsersModule {}
 
