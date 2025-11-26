@@ -10,4 +10,6 @@ export interface IProyectosService {
   findById(id: string): Promise<ProyectoDocument>;
   update(id: string, data: UpdateProyectoDto): Promise<ProyectoDocument>;
   delete(id: string): Promise<void>;
+  findDeleted(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto>;
+  restore(id: string): Promise<ProyectoDocument>;
 }

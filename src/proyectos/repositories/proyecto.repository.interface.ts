@@ -11,4 +11,7 @@ export interface IProyectosRepository {
   findByName(nombre: string): Promise<ProyectoDocument | null>;
   update(id: string, data: UpdateProyectoDto): Promise<ProyectoDocument | null>;
   softDelete(id: string): Promise<ProyectoDocument | null>;
+  findDeleted(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto>;
+  restore(id: string): Promise<ProyectoDocument | null>;
+  findRawById(id: string): Promise<ProyectoDocument | null>;
 }

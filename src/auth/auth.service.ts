@@ -79,10 +79,7 @@ export class AuthService implements IAuthService {
     return { message: 'Email para restablecer contraseña enviado.' };
   }
 
-  async resetPassword(
-    token: string,
-    newPassword: string,
-  ): Promise<{ message: string }> {
+  async resetPassword(token: string, newPassword: string ): Promise<{ message: string }> {
     const user = await this.usersService.findByResetToken(token);
     if (!user) {throw new UnauthorizedException('Token inválido o expirado.');}
 

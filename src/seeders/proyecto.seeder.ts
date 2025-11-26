@@ -15,13 +15,14 @@ export class ProyectosSeeder {
 
     // 1. OBTENER IDS NECESARIOS PARA INTEGRIDAD REFERENCIAL
     // Buscamos el cliente de prueba
-    const clienteTest = await this.usersRepo.findByEmail('cliente@test.com');
+    const clienteTest = await this.usersRepo.findByEmail('cliente1@test.com');
     
-    // Buscamos un área de prueba
+    // Buscamos alguna de las 3 áreas por defecto, según US 6.
     const areaVentas = await this.areasRepo.findByName('Ventas');
+    const areaFacturacion = await this.areasRepo.findByName('Facturación');
 
-    if (!clienteTest || clienteTest.rol !== UserRole.CLIENTE) {
-      console.error('ERROR: No se encontró el usuario de prueba "cliente@test.com" con rol Cliente. Saltando seeder de proyectos.');
+    if (!clienteTest || clienteTest.role !== UserRole.CLIENTE) {
+      console.error('ERROR: No se encontró el usuario de prueba "cliente1@test.com" con rol Cliente. Saltando seeder de proyectos.');
       return;
     }
 
@@ -32,6 +33,7 @@ export class ProyectosSeeder {
     
     const clienteId = clienteTest.id;
     const areaVentasId = areaVentas.id;
+    const areaFacturacionId = areaFacturacion?.id;
 
     // 2. DEFINICIÓN DE PROYECTOS
     const defaults = [
@@ -52,10 +54,10 @@ export class ProyectosSeeder {
         fechaFinPrevista: new Date('2025-12-31'),
       },
       {
-        nombre: 'Actualización de Servidores Web',
+        nombre: 'Pago de Servidores Web',
         descripcion: 'Migración de la infraestructura a AWS.',
         cliente: clienteId,
-        areaResponsable: areaVentasId, // Usamos la misma área por simplicidad
+        areaResponsable: areaFacturacionId,
         fechaInicio: new Date('2024-10-01'),
         fechaFinPrevista: new Date('2024-12-15'),
       },
