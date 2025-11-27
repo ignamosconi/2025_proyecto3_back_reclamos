@@ -40,9 +40,23 @@ export class ReclamoRepository implements IReclamoRepository {
 
   async update(id: string, updateData: UpdateReclamoDto): Promise<Reclamo | null> {
     // Solo actualiza título y descripción (US 7)
+    // Construir objeto de actualización dinámicamente solo con los campos que vienen en el DTO
+    const updateSet: any = {};
+    if (updateData.titulo !== undefined) {
+      updateSet.titulo = updateData.titulo;
+    }
+    if (updateData.descripcion !== undefined) {
+      updateSet.descripcion = updateData.descripcion;
+    }
+
+    // Si no hay nada que actualizar, devolver el reclamo sin cambios
+    if (Object.keys(updateSet).length === 0) {
+      return this.reclamoModel.findById(id).exec();
+    }
+
     return this.reclamoModel.findByIdAndUpdate(
       id,
-      { $set: { titulo: updateData.titulo, descripcion: updateData.descripcion } },
+      { $set: updateSet },
       { new: true },
     ).exec();
   }

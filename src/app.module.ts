@@ -9,6 +9,7 @@ import { TipoReclamoModule } from './tipoReclamo/tipo-reclamo.module';
 import { UsersModule } from './users/users.module';
 import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './auth/auth.module';
+import { ReclamoModule } from './reclamo/reclamo.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AuthModule } from './auth/auth.module';
     ProyectosModule,
     MailerModule,
     AuthModule,
+    ReclamoModule,
 
   ],
   controllers: [AppController],

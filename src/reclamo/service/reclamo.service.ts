@@ -64,10 +64,15 @@ export class ReclamoService implements IReclamoService {
       if (!proyecto) { // Doble check por seguridad
          throw new NotFoundException('El proyecto indicado no existe.');
       }
-      // Convertimos a string por seguridad
-      areaId = proyecto.areaResponsable.toString(); 
+      // Convertimos a string por seguridad. El campo `areaResponsable` puede venir como ObjectId
+      // o como documento poblado (objeto). En el segundo caso extraemos su _id.
+      if (proyecto.areaResponsable && (proyecto.areaResponsable as any)._id) {
+        areaId = String((proyecto.areaResponsable as any)._id);
+      } else {
+        areaId = String(proyecto.areaResponsable);
+      }
 
-      if (!areaId) {
+      if (!areaId || areaId === 'undefined' || areaId === 'null') {
         throw new ConflictException(`El proyecto "${proyecto.nombre}" no tiene un Área Responsable asignada.`);
       }
 
@@ -274,7 +279,12 @@ export class ReclamoService implements IReclamoService {
       throw new NotFoundException(`El reclamo con ID ${reclamoId} ha sido eliminado.`);
     }
 
-    if (reclamo.fkCliente.toString() !== userId) {
+    // Asegurarnos de comparar correctamente el ID del cliente aunque fkCliente venga poblado
+    const reclamoClienteId = reclamo.fkCliente && (reclamo.fkCliente as any)._id
+      ? String((reclamo.fkCliente as any)._id)
+      : String(reclamo.fkCliente);
+
+    if (reclamoClienteId !== String(userId)) {
       throw new ForbiddenException('No tienes permiso para modificar este reclamo.');
     }
 
