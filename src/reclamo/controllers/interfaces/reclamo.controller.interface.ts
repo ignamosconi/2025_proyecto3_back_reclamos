@@ -28,24 +28,21 @@ export interface IReclamoController {
     req: RequestWithUser,
   ): Promise<ReclamoResponseDto>;
 
+  reassignArea(
+    id: string,
+    nuevaAreaId: string,
+    req: RequestWithUser,
+  ): Promise<ReclamoResponseDto>;
   deleteReclamo(id: string, req: RequestWithUser): Promise<void>;
 
   restoreReclamo(id: string, req: RequestWithUser): Promise<ReclamoResponseDto>;
-
-  // --- Encargado/Flujo de Trabajo (US 11, US 12, US 8) ---
-  autoAssignReclamo(reclamoId: string, encargadoId: string): Promise<ReclamoResponseDto>;
-
-  updateReclamoTeam(
-    reclamoId: string,
-    adminId: string,
-    data: UpdateEncargadosDto,
-  ): Promise<void>;
-
-  reassignReclamoArea(
-    reclamoId: string,
-    nuevaAreaId: string,
-    adminId: string,
+  
+  changeState(
+    id: string,
+    data: import('../../dto/change-state.dto').ChangeStateDto,
+    req: RequestWithUser,
   ): Promise<ReclamoResponseDto>;
+  
 }
 
 export const IReclamoController = Symbol('IReclamoController');

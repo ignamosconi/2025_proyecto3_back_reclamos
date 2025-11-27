@@ -4,23 +4,22 @@ import { Document } from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 import { Reclamo } from './reclamo.schema';
 
-
-@Schema({ timestamps: true }) 
+@Schema()
 export class Imagen extends Document {
-
-  @ApiProperty({ example: 'screenshot_fallo_01.jpg' })
+  @ApiProperty({ example: 'evidencia-1.png' })
   @Prop({ required: true, type: String })
   nombre: string;
 
-  @ApiProperty({ example: 's3://bucket-reclamos/uuid_reclamo/img_key.jpg' })
-  @Prop({ required: true, type: String, unique: true })
-  rutaStorage: string; 
+  // Almacenar binario en Mongo como Buffer
+  @ApiProperty({ type: 'string', format: 'binary' })
+  @Prop({ required: true, type: Buffer })
+  imagen: Buffer;
 
-  @ApiProperty({ example: 'image/jpeg' })
+  @ApiProperty({ example: 'image/png' })
   @Prop({ required: true, type: String })
   tipo: string;
 
-  @ApiProperty({ type: String, format: 'ObjectId', example: '60c72b2f9c3f9a0015b67e7c' })
+  @ApiProperty({ type: String, format: 'ObjectId' })
   @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Reclamo' })
   fkReclamo: Reclamo;
 }

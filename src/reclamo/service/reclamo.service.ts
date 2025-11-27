@@ -22,6 +22,7 @@ import { User, UserDocument } from '../../users/schemas/user.schema';
 import { IReclamoService } from './interfaces/reclamo.service.interface';
 import { IReclamoRepository } from '../repositories/interfaces/reclamo.repository.interface';
 import { IReclamoEncargadoRepository } from '../repositories/interfaces/reclamo-encargado.repository.interface';
+import { IImagenRepository } from '../repositories/interfaces/imagen.repository.interface';
 import type { IProyectosService } from 'src/proyectos/services/proyecto.service.interface';
 import { Reclamo } from '../schemas/reclamo.schema';
 import { PaginatedReclamoResponseDto } from '../dto/pag-reclamo-response.dto';
@@ -42,6 +43,8 @@ export class ReclamoService implements IReclamoService {
     private readonly proyectosService: IProyectosService,
 
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @Inject(IImagenRepository)
+    private readonly imagenRepository: IImagenRepository,
   ) {}
 
   // ==================================================================
@@ -90,14 +93,25 @@ export class ReclamoService implements IReclamoService {
     return nuevoReclamo;
   }
 
-  async findAll(query: GetReclamoQueryDto, userId: string): Promise<PaginatedReclamoResponseDto> {
-    const result = await this.reclamoRepository.findAllPaginated(query, userId);
+  async findAll(query: GetReclamoQueryDto, userId: string, userRole?: string): Promise<PaginatedReclamoResponseDto> {
+    // Si es Cliente, filtra por fkCliente. Si es Encargado/Gerente, devuelve todos
+    const isClient = userRole === 'Cliente';
+    const clientIdFilter: string | undefined = isClient ? userId : undefined;
+    const result = await this.reclamoRepository.findAllPaginated(query, clientIdFilter);
+    
+    // Determinar si el usuario es staff
+    const isStaff = userRole === 'ENCARGADO' || userRole === 'GERENTE';
     
     return {
       // Mapeamos cada documento de Mongoose al formato del DTO
       data: result.data.map((reclamo) => {
         // toObject() convierte el Documento de Mongoose a un objeto plano de JS
         const doc = reclamo.toObject(); 
+        
+        // Solo mostrar encargados si es staff
+        if (!isStaff) {
+          doc.encargados = undefined;
+        }
         
         return {
           ...doc,
@@ -116,11 +130,19 @@ export class ReclamoService implements IReclamoService {
     };
   }
 
-  async findById(id: string): Promise<Reclamo> {
+  async findById(id: string, userRole?: string): Promise<Reclamo> {
     const reclamo = await this.reclamoRepository.findById(id, true); // populate = true
     if (!reclamo) {
       throw new NotFoundException(`Reclamo con ID ${id} no encontrado.`);
     }
+
+    // Solo mostrar encargados si el usuario es Encargado o Gerente
+    const isStaff = userRole === 'ENCARGADO' || userRole === 'GERENTE';
+    if (!isStaff) {
+      // Remover el campo encargados para usuarios que no sean staff
+      (reclamo as any).encargados = undefined;
+    }
+
     return reclamo;
   }
 
@@ -176,80 +198,6 @@ export class ReclamoService implements IReclamoService {
   // LÓGICA DE FLUJO DE TRABAJO (US 11, US 12, US 8)
   // ==================================================================
 
-  async autoAssign(reclamoId: string, encargadoId: string): Promise<Reclamo> {
-    const reclamo = await this.reclamoRepository.findById(reclamoId, false);
-    if (!reclamo) throw new NotFoundException(`Reclamo no encontrado.`);
-
-    // 1. Validaciones US 11
-    if (reclamo.estado !== EstadoReclamo.PENDIENTE) {
-      throw new ConflictException('Solo se puede autoasignar un reclamo en estado PENDIENTE.');
-    }
-
-    // Validar que el reclamo no tenga ya encargados (por si acaso)
-    const count = await this.reclamoEncargadoRepository.countEncargadosByReclamo(reclamoId);
-    if (count > 0) {
-        throw new ConflictException('El reclamo ya tiene encargados. No puede usar autoasignación.');
-    }
-
-    // 2. Asignación N:M
-    await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId);
-
-    // 3. Cambio de Estado
-    const updatedReclamo = await this.reclamoRepository.updateEstadoToEnRevision(reclamoId);
-
-    if (!updatedReclamo) {
-        throw new NotFoundException('Fallo al actualizar el estado del reclamo tras la autoasignación.');
-    }
-
-    // TODO: Emitir evento para módulo Historial (AUTOASIGNACION)
-
-    return updatedReclamo;
-  }
-
-  async updateTeam(reclamoId: string, adminId: string, data: UpdateEncargadosDto): Promise<void> {
-    const reclamo = await this.reclamoRepository.findById(reclamoId, false);
-    if (!reclamo) throw new NotFoundException(`Reclamo no encontrado.`);
-
-    // 1. Validaciones US 12
-    if (reclamo.estado !== EstadoReclamo.EN_REVISION) {
-       throw new ConflictException('La gestión de equipo solo está disponible en estado EN REVISIÓN.');
-    }
-
-    // Verificar que quien solicita (adminId) sea parte del equipo actual
-    const isAssigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, adminId);
-    if (!isAssigned) {
-        throw new ForbiddenException('Solo un encargado asignado al reclamo puede modificar el equipo.');
-    }
-
-    // 2. Procesar Eliminaciones
-    if (data.removeEncargadosIds?.length) {
-        // Validar que no vaciemos el equipo
-        const currentCount = await this.reclamoEncargadoRepository.countEncargadosByReclamo(reclamoId);
-        if (currentCount <= data.removeEncargadosIds.length) {
-             // Chequear si los que quedan son distintos a los que borramos
-             // Simplificación: Bloquear si intenta borrar igual o más cantidad de la que hay
-             throw new BadRequestException('No se puede dejar el reclamo sin encargados.');
-        }
-
-        for (const idToRemove of data.removeEncargadosIds) {
-            await this.reclamoEncargadoRepository.unassignEncargado(reclamoId, idToRemove);
-            // TODO: Historial (DESASIGNACION)
-        }
-    }
-
-    // 3. Procesar Adiciones
-    if (data.addEncargadosIds?.length) {
-        for (const idToAdd of data.addEncargadosIds) {
-            try {
-                await this.reclamoEncargadoRepository.assignEncargado(reclamoId, idToAdd);
-                // TODO: Historial (ASIGNACION)
-            } catch (error) {
-                // Ignoramos duplicados
-            }
-        }
-    }
-  }
-
   async reassignArea(reclamoId: string, nuevaAreaId: string): Promise<Reclamo> {
     // 1. Limpiar encargados
     await this.reclamoRepository.clearEncargados(reclamoId);
@@ -260,6 +208,69 @@ export class ReclamoService implements IReclamoService {
     if(!updated) throw new NotFoundException('Reclamo no encontrado');
 
     // TODO: Historial (REASIGNACION_AREA)
+
+    return updated;
+  }
+
+  async changeState(reclamoId: string, data: import('../dto/change-state.dto').ChangeStateDto, actorId: string, actorRole: string): Promise<Reclamo> {
+    const { estado, sintesis } = data;
+
+    const reclamo = await this.reclamoRepository.findById(reclamoId, false);
+    if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
+
+    // No permitir cambios si está en estado final
+    if (reclamo.estado === (EstadoReclamo.RESUELTO) || reclamo.estado === (EstadoReclamo.RECHAZADO)) {
+      throw new BadRequestException('No es posible cambiar el estado de un reclamo en estado final.');
+    }
+
+    // Validaciones de permiso: Gerente puede siempre; Encargado debe estar asignado al reclamo
+    const roleNormalized = String(actorRole || '').toUpperCase();
+    if (roleNormalized !== 'GERENTE') {
+      if (roleNormalized === 'ENCARGADO') {
+        const assigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, actorId);
+        if (!assigned) throw new ForbiddenException('No estás asignado a este reclamo.');
+      } else {
+        throw new ForbiddenException('Rol no autorizado para cambiar el estado.');
+      }
+    }
+
+    // Requerir síntesis cuando se pasa a estados finales
+    if ((estado === EstadoReclamo.RESUELTO || estado === EstadoReclamo.RECHAZADO) && !sintesis) {
+      throw new BadRequestException('Se requiere síntesis/motivo al marcar el reclamo como Resuelto o Rechazado.');
+    }
+
+    // Actualizar estado
+    const updated = await this.reclamoRepository.updateEstado(reclamoId, estado);
+    if (!updated) throw new NotFoundException('Fallo al actualizar el estado del reclamo');
+
+    // TODO: Emitir evento para Historial con { prevEstado, nuevoEstado, actorId, actorRole, sintesis }
+
+    return updated;
+  }
+  
+
+  async updateImagen(reclamoId: string, imagenId: string, data: import('../dto/update-imagen.dto').UpdateImagenDto, actorId: string) : Promise<import('../schemas/imagen.schema').Imagen> {
+    // Verificar que el actor es dueño del reclamo y que está en PENDIENTE
+    await this.validateOwnershipAndStatus(reclamoId, actorId, EstadoReclamo.PENDIENTE);
+
+    // Verificar existencia de la imagen y pertenencia al reclamo
+    const imagen = await this.imagenRepository.findById(imagenId);
+    if (!imagen) throw new NotFoundException('Imagen no encontrada');
+    const imagenReclamoId = (imagen as any).fkReclamo ? String((imagen as any).fkReclamo) : String((imagen as any).fkReclamo);
+    if (imagenReclamoId !== reclamoId) {
+      throw new BadRequestException('La imagen no pertenece al reclamo indicado');
+    }
+
+    const updates: Partial<{ nombre: string; tipo: string; imagen: Buffer }> = {};
+    if (data.nombre !== undefined) updates.nombre = data.nombre;
+    if (data.tipo !== undefined) updates.tipo = data.tipo;
+    if (data.imagen !== undefined) {
+      // convertir base64 a Buffer
+      updates.imagen = Buffer.from(data.imagen, 'base64');
+    }
+
+    const updated = await this.imagenRepository.updateById(imagenId, updates);
+    if (!updated) throw new NotFoundException('Fallo al actualizar la imagen');
 
     return updated;
   }

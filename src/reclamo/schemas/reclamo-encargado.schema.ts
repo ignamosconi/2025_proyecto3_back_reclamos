@@ -1,23 +1,47 @@
-import * as mongoose from 'mongoose';
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-import { ApiProperty } from '@nestjs/swagger';
-import { Reclamo } from './reclamo.schema';
-import { User } from 'src/users/schemas/user.schema';
+import { Document, Schema as MongooseSchema } from 'mongoose';
+import { ApiProperty } from '@nestjs/swagger'; // 👈 Importación clave
 
-
-@Schema({ timestamps: true }) 
+@Schema({ 
+  timestamps: true,
+  collection: 'reclamosEncargados',
+})
 export class ReclamoEncargado extends Document {
 
-  @ApiProperty({ type: String, format: 'ObjectId', description: 'ID del Reclamo asociado.' })
-  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'Reclamo' })
-  fkReclamo: Reclamo;
+  
+  @ApiProperty({
+    description: 'ID del Reclamo al que está asignado el Encargado.',
+    type: String, 
+    format: 'ObjectId',
+    example: '60c72b2f9c3f9a0015b67e7d'
+  })
+  @Prop({ 
+    type: MongooseSchema.Types.ObjectId, 
+    ref: 'Reclamo', 
+    required: true,
+    index: true, 
+  })
+  fkReclamo: MongooseSchema.Types.ObjectId; 
 
-  @ApiProperty({ type: String, format: 'ObjectId', description: 'ID del Usuario (Encargado) asignado.' })
-  @Prop({ required: true, type: mongoose.Schema.Types.ObjectId, ref: 'User' })
-  fkEncargado: User;
+  @ApiProperty({
+    description: 'ID del Encargado (Usuario Staff) asignado al Reclamo.',
+    type: String, 
+    format: 'ObjectId',
+    example: '60c72b2f9c3f9a0015b67e7e'
+  })
+  @Prop({ 
+    type: MongooseSchema.Types.ObjectId, 
+    ref: 'User', 
+    required: true,
+    index: true, 
+  })
+  fkEncargado: MongooseSchema.Types.ObjectId; // FK a User (Encargado)
+  
+  // Las propiedades de Mongoose 'createdAt' y 'updatedAt' se añaden automáticamente.
 }
 
 export const ReclamoEncargadoSchema = SchemaFactory.createForClass(ReclamoEncargado);
 
+// Índice compuesto para la unicidad:
+// Índice compuesto para evitar asignaciones duplicadas (Reclamo <-> Encargado)
 ReclamoEncargadoSchema.index({ fkReclamo: 1, fkEncargado: 1 }, { unique: true });

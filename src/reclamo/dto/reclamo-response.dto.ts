@@ -1,9 +1,10 @@
 // src/reclamos/dto/reclamo-response.dto.ts
 
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Prioridad } from '../enums/prioridad.enum';
 import { Criticidad } from '../enums/criticidad.enum';
 import { EstadoReclamo } from '../enums/estado.enum';
+import { EncargadoResponseDto } from './encargado-response.dto';
 
 export class ReclamoResponseDto {
     
@@ -42,4 +43,7 @@ export class ReclamoResponseDto {
 
     @ApiProperty({ type: Date, example: '2025-11-25T18:30:00.000Z' })
     readonly updatedAt: Date;
+
+    @ApiPropertyOptional({ type: [EncargadoResponseDto], description: 'Lista de encargados asignados al reclamo' })
+    readonly encargados?: EncargadoResponseDto[];
 }

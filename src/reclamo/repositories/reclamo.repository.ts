@@ -2,8 +2,9 @@
 
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Reclamo } from '../schemas/reclamo.schema';
+import { ReclamoEncargado } from '../schemas/reclamo-encargado.schema';
 import { CreateReclamoDto } from '../dto/create-reclamo.dto';
 import { UpdateReclamoDto } from '../dto/update-reclamo.dto';
 import { GetReclamoQueryDto } from '../dto/get-reclamo-query.dto';
@@ -14,6 +15,7 @@ import { IReclamoRepository } from './interfaces/reclamo.repository.interface';
 export class ReclamoRepository implements IReclamoRepository {
   constructor(
     @InjectModel(Reclamo.name) private readonly reclamoModel: Model<Reclamo>,
+    @InjectModel(ReclamoEncargado.name) private readonly reclamoEncargadoModel: Model<ReclamoEncargado>,
     // NOTA: Aquí se inyectarían otros modelos/repositorios (Historial, ReclamoEncargado) 
     // para completar las transacciones de flujo de trabajo (US 8, US 11).
   ) {}
@@ -25,7 +27,20 @@ export class ReclamoRepository implements IReclamoRepository {
       query.populate(['fkCliente', 'fkProyecto', 'fkTipoReclamo', 'fkArea']);
     }
     // NOTA: Se podría añadir un filtro { deletedAt: null } si se quiere ocultar el soft-deleted por defecto.
-    return query.exec();
+    const reclamo = await query.exec();
+    
+    // Si el reclamo existe y se pide populate, traer también los encargados asignados
+    if (reclamo && populate) {
+      const reclamoEncargados = await this.reclamoEncargadoModel
+        .find({ fkReclamo: id })
+        .populate('fkEncargado', 'nombre email role')
+        .exec();
+      
+      // Transformar los datos para que queden en un array de encargados
+      (reclamo as any).encargados = reclamoEncargados.map((re) => re.fkEncargado);
+    }
+    
+    return reclamo;
   }
 
   async create(reclamoData: CreateReclamoDto, fkClienteId: string, fkAreaId: string): Promise<Reclamo> {
@@ -83,12 +98,16 @@ export class ReclamoRepository implements IReclamoRepository {
 
   // --- Listado y Paginación (US 7) ---
 
-  async findAllPaginated(query: GetReclamoQueryDto, fkClienteId: string): Promise<{ data: Reclamo[], total: number, page: number, limit: number }> {
+  async findAllPaginated(query: GetReclamoQueryDto, fkClienteId?: string): Promise<{ data: Reclamo[], total: number, page: number, limit: number }> {
     const { page, limit, estado, fkTipoReclamo, fechaInicio, fechaFin } = query;
     const skip = (page - 1) * limit;
 
-    // Filtra automáticamente por el Cliente y excluye los eliminados lógicamente
-    const filter: any = { fkCliente: fkClienteId, deletedAt: null };
+    // Si fkClienteId está definido, filtra por cliente (es Cliente). Si no está, devuelve todos (es Encargado/Gerente).
+    const filter: any = { deletedAt: null };
+    
+    if (fkClienteId) {
+      filter.fkCliente = fkClienteId;
+    }
 
     if (estado) filter.estado = estado;
     if (fkTipoReclamo) filter.fkTipoReclamo = fkTipoReclamo;
@@ -120,6 +139,14 @@ export class ReclamoRepository implements IReclamoRepository {
     ).exec();
   }
 
+  async updateEstado(reclamoId: string, nuevoEstado: EstadoReclamo): Promise<Reclamo | null> {
+    return this.reclamoModel.findByIdAndUpdate(
+      reclamoId,
+      { $set: { estado: nuevoEstado } },
+      { new: true },
+    ).exec();
+  }
+
  async updateEstadoToEnRevision(reclamoId: string): Promise<Reclamo | null> {
     //solo actualiza el estado del Reclamo (US 11).
     // La asignación real N:M ocurre en reclamo-encargado.
@@ -131,8 +158,10 @@ export class ReclamoRepository implements IReclamoRepository {
     }
 
   async clearEncargados(reclamoId: string): Promise<void> {
-    // Implementación pendiente: requiere la inyección del ReclamoEncargadoRepository
-    // para realizar: await this.reclamoEncargadoRepository.deleteManyByReclamo(reclamoId)
-    return; 
+    // Elimina todas las asignaciones N:M (Reclamo <-> Encargado) para el reclamo dado.
+    // Usamos directamente el modelo inyectado `reclamoEncargadoModel` para evitar
+    // dependencias circulares y porque este repositorio ya lo provee.
+    await this.reclamoEncargadoModel.deleteMany({ fkReclamo: new Types.ObjectId(reclamoId) }).exec();
+    return;
   }
 }

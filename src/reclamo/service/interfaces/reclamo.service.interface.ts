@@ -19,13 +19,17 @@ export interface IReclamoService {
 
   /**
    * Obtiene la lista de reclamos paginada y filtrada.
+   * Si userRole es 'Cliente', filtra por userId (solo sus reclamos).
+   * Si userRole es 'Encargado' o 'Gerente', devuelve todos los reclamos.
    */
-  findAll(query: GetReclamoQueryDto, userId: string): Promise<PaginatedReclamoResponseDto>;
+  findAll(query: GetReclamoQueryDto, userId: string, userRole?: string): Promise<PaginatedReclamoResponseDto>;
 
   /**
    * Obtiene un reclamo por ID con sus relaciones pobladas.
+   * Si userRole es 'Encargado' o 'Gerente', incluye los encargados asignados.
+   * Si es 'Cliente' o no autenticado, no incluye los encargados.
    */
-  findById(id: string): Promise<Reclamo>;
+  findById(id: string, userRole?: string): Promise<Reclamo>;
 
   /**
    * Modifica título y descripción. Solo permitido si el reclamo está en PENDIENTE.
@@ -46,18 +50,17 @@ export interface IReclamoService {
   // LÓGICA DE FLUJO DE TRABAJO (US 11, US 12, US 8)
   // ==================================================================
 
-  /**
-   * Autoasignación de un encargado a un reclamo PENDIENTE (US 11).
-   */
-  autoAssign(reclamoId: string, encargadoId: string): Promise<Reclamo>;
-
-  /**
-   * Añadir o eliminar Encargados de equipo de un reclamo EN REVISIÓN (US 12).
-   */
-  updateTeam(reclamoId: string, adminId: string, data: UpdateEncargadosDto): Promise<void>;
-
-  /**
-   * Reasigna el reclamo a una nueva Área. Limpia encargados y cambia a PENDIENTE (US 8).
-   */
   reassignArea(reclamoId: string, nuevaAreaId: string): Promise<Reclamo>;
+
+
+  /**
+   * Cambia el estado de un reclamo (p. ej. a En Revisión, Resuelto, Rechazado).
+   * actorRole/actorId se usan para validar permisos (Encargado debe estar asignado al reclamo).
+   */
+  changeState(reclamoId: string, data: import('../../dto/change-state.dto').ChangeStateDto, actorId: string, actorRole: string): Promise<Reclamo>;
+
+  /**
+   * Actualiza una imagen asociada a un reclamo (solo propietario y reclamo en estado PENDIENTE).
+   */
+  // updateImagen moved to ImagenService
 }

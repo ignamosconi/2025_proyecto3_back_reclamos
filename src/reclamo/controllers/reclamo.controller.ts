@@ -6,6 +6,7 @@ import {
   Get,
   Put,
   Delete,
+  Patch,
   Body,
   Param,
   Query,
@@ -31,11 +32,17 @@ import { GetReclamoQueryDto } from '../dto/get-reclamo-query.dto';
 import { PaginatedReclamoResponseDto } from '../dto/pag-reclamo-response.dto';
 import { ReclamoResponseDto } from '../dto/reclamo-response.dto';
 import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
+import { ChangeStateDto } from '../dto/change-state.dto';
+import { UpdateImagenDto } from '../dto/update-imagen.dto';
 import { IReclamoController } from './interfaces/reclamo.controller.interface';
 import type { IReclamoService } from '../service/interfaces/reclamo.service.interface';
+import type { IImagenService } from '../service/interfaces/imagen.service.interface';
 import { ParseObjectIdPipe } from 'src/common/pipes/objectId.pipe';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
+import { Roles } from 'src/auth/decorators/roles.decorator';
 import type { RequestWithUser } from 'src/auth/interfaces/request-with-user.interface';
+import { UserRole } from 'src/users/helpers/enum.roles';
 
 
 @ApiTags('Reclamos') 
@@ -45,6 +52,8 @@ export class ReclamoController implements IReclamoController {
   constructor(
     @Inject('IReclamoService')
     private readonly reclamoService: IReclamoService,
+    @Inject('IImagenService')
+    private readonly imagenService: IImagenService,
   ) {}
 
   // ==================================================================
@@ -56,7 +65,8 @@ export class ReclamoController implements IReclamoController {
   @ApiOperation({ summary: 'Crea un nuevo reclamo asociado a un proyecto (Rol: Cliente)' })
   @ApiBody({ type: CreateReclamoDto })
   @ApiResponse({ status: HttpStatus.CREATED, type: ReclamoResponseDto })
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE)
   async createReclamo(
     @Body() data: CreateReclamoDto,
     @Req() req: RequestWithUser,
@@ -66,13 +76,32 @@ export class ReclamoController implements IReclamoController {
     const newReclamo = await this.reclamoService.create(data, userId);
     return newReclamo.toObject() as ReclamoResponseDto;
   }
+
+  @Patch(':id/estado')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Cambiar estado del reclamo (Encargados asignados o Gerentes)' })
+  @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
+  @ApiBody({ type: ChangeStateDto })
+  @ApiResponse({ status: HttpStatus.OK, type: ReclamoResponseDto })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
+  async changeState(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() data: ChangeStateDto,
+    @Req() req: RequestWithUser,
+  ): Promise<ReclamoResponseDto> {
+    const actorId = String((req.user as any)._id);
+    const actorRole = (req.user as any).role || (req.user as any).rol;
+    const updated = await this.reclamoService.changeState(id, data, actorId, actorRole);
+    return updated.toObject() as ReclamoResponseDto;
+  }
   
   @Get()
-  @ApiOperation({ summary: 'Obtiene el listado de reclamos del cliente autenticado (Rol: Cliente)' })
+  @ApiOperation({ summary: 'Obtiene el listado de reclamos. Clientes ven solo los suyos; Encargados/Gerentes ven todos.' })
   @ApiQuery({ type: GetReclamoQueryDto })
   @ApiResponse({
     status: HttpStatus.OK,
-    description: 'Lista de reclamos del cliente.',
+    description: 'Lista de reclamos.',
     type: PaginatedReclamoResponseDto,
   })
   @UseGuards(AuthGuard)
@@ -80,9 +109,9 @@ export class ReclamoController implements IReclamoController {
     @Query() query: GetReclamoQueryDto,
     @Req() req: RequestWithUser,
   ): Promise<PaginatedReclamoResponseDto> {
-    // El servicio ya filtra por fkCliente (userId)
     const userId = String((req.user as any)._id);
-    return this.reclamoService.findAll(query, userId);
+    const userRole = (req.user as any).rol || (req.user as any).role; // Soportar rol o role
+    return this.reclamoService.findAll(query, userId, userRole);
   }
 
   @Get(':id')
@@ -90,9 +119,11 @@ export class ReclamoController implements IReclamoController {
   @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
   @ApiResponse({ status: HttpStatus.OK, type: ReclamoResponseDto })
   async getReclamoById(
-    @Param('id', ParseObjectIdPipe) id: string
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Req() req?: RequestWithUser,
   ): Promise<ReclamoResponseDto> {
-    const reclamo = await this.reclamoService.findById(id);
+    const userRole = req?.user ? (req.user as any).role : undefined;
+    const reclamo = await this.reclamoService.findById(id, userRole);
     return reclamo.toObject() as ReclamoResponseDto;
   }
 
@@ -102,7 +133,8 @@ export class ReclamoController implements IReclamoController {
   @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
   @ApiBody({ type: UpdateReclamoDto })
   @ApiResponse({ status: HttpStatus.OK, type: ReclamoResponseDto })
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE)
   async updateReclamo(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() data: UpdateReclamoDto,
@@ -118,7 +150,8 @@ export class ReclamoController implements IReclamoController {
   @ApiOperation({ summary: 'Eliminación lógica del reclamo. Solo si está PENDIENTE. (Rol: Cliente)' })
   @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Reclamo eliminado lógicamente.' })
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE)
   async deleteReclamo(
     @Param('id', ParseObjectIdPipe) id: string,
     @Req() req: RequestWithUser,
@@ -132,7 +165,8 @@ export class ReclamoController implements IReclamoController {
   @ApiOperation({ summary: 'Restaura un reclamo eliminado lógicamente (Rol: Cliente)' })
   @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
   @ApiResponse({ status: HttpStatus.OK, type: ReclamoResponseDto })
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE)
   async restoreReclamo(
     @Param('id', ParseObjectIdPipe) id: string,
     @Req() req: RequestWithUser,
@@ -145,52 +179,42 @@ export class ReclamoController implements IReclamoController {
   // ==================================================================
   // LÓGICA DE FLUJO DE TRABAJO (Encargado/Admin)
   // ==================================================================
-
-  @Post(':reclamoId/auto-assign')
+  // Reasigna el reclamo a una nueva área y limpia encargados
+  @Post('reassign-area/:nuevaAreaId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Autoasigna un encargado al reclamo y cambia estado a EN_REVISION (US 11). (Rol: Encargado)' })
-  @ApiParam({ name: 'reclamoId', description: 'ID del reclamo', type: 'string' })
+  @ApiOperation({ summary: 'Reasigna el reclamo a una nueva área y limpia encargados' })
+  @ApiParam({ name: 'reclamoId', type: 'string' })
+  @ApiParam({ name: 'nuevaAreaId', type: 'string' })
   @ApiResponse({ status: HttpStatus.OK, type: ReclamoResponseDto })
-  async autoAssignReclamo(
-    @Param('reclamoId', ParseObjectIdPipe) reclamoId: string, 
-    encargadoId: string, 
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
+  async reassignArea(
+    @Param('reclamoId', ParseObjectIdPipe) reclamoId: string,
+    @Param('nuevaAreaId', ParseObjectIdPipe) nuevaAreaId: string,
+    @Req() req: RequestWithUser,
   ): Promise<ReclamoResponseDto> {
-    const updatedReclamo = await this.reclamoService.autoAssign(
-      reclamoId,
-      encargadoId,
-    );
-    return updatedReclamo.toObject() as ReclamoResponseDto;
+    // Nota: El servicio central maneja la lógica de reasignación (limpia encargados y actualiza área)
+    const updated = await this.reclamoService.reassignArea(reclamoId, nuevaAreaId);
+    return updated.toObject() as ReclamoResponseDto;
   }
 
-  @Put(':reclamoId/team')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Gestiona la adición/eliminación de encargados. Solo si está EN_REVISION (US 12). (Rol: Encargado Asignado)' })
-  @ApiParam({ name: 'reclamoId', description: 'ID del reclamo', type: 'string' })
-  @ApiBody({ type: UpdateEncargadosDto })
-  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Equipo del reclamo actualizado.' })
-  async updateReclamoTeam(
-    @Param('reclamoId', ParseObjectIdPipe) reclamoId: string, // 👈 Uso del Pipe
-    adminId: string,
-    @Body() data: UpdateEncargadosDto,
-  ): Promise<void> {
-    await this.reclamoService.updateTeam(reclamoId, adminId, data);
-  }
-
-  @Post(':reclamoId/reassign-area/:nuevaAreaId')
+  @Put(':id/imagenes/:imagenId')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Reasigna el reclamo a una nueva área. Borra encargados y cambia el estado a PENDIENTE (US 8). (Rol: Admin)' })
-  @ApiParam({ name: 'reclamoId', description: 'ID del reclamo', type: 'string' })
-  @ApiParam({ name: 'nuevaAreaId', description: 'ID de la nueva área responsable', type: 'string' })
-  @ApiResponse({ status: HttpStatus.OK, type: ReclamoResponseDto })
-  async reassignReclamoArea(
-    @Param('reclamoId', ParseObjectIdPipe) reclamoId: string, // 👈 Uso del Pipe
-    @Param('nuevaAreaId', ParseObjectIdPipe) nuevaAreaId: string, // 👈 Uso del Pipe
-    adminId: string,
-  ): Promise<ReclamoResponseDto> {
-    const updatedReclamo = await this.reclamoService.reassignArea(
-      reclamoId,
-      nuevaAreaId,
-    );
-    return updatedReclamo.toObject() as ReclamoResponseDto;
+  @ApiOperation({ summary: 'Actualizar imagen asociada a un reclamo (Cliente propietario, reclamo PENDIENTE)' })
+  @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
+  @ApiParam({ name: 'imagenId', description: 'ID de la imagen', type: 'string' })
+  @ApiBody({ type: UpdateImagenDto })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Imagen actualizada.' })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE)
+  async updateImagen(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Param('imagenId', ParseObjectIdPipe) imagenId: string,
+    @Body() data: UpdateImagenDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const actorId = String((req.user as any)._id);
+    const updated = await this.imagenService.update(id, imagenId, data, actorId);
+    return (updated as any).toObject ? (updated as any).toObject() : updated;
   }
 }
