@@ -22,6 +22,7 @@ import { ProyectosModule } from 'src/proyectos/proyecto.module';
 import { TipoReclamoModule } from 'src/tipoReclamo/tipo-reclamo.module';
 import { AreasResponsablesModule } from 'src/areasResponsables/areas-responsables.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { HistorialModule } from 'src/historial/historial.module';
 
 @Module({
 	imports: [
@@ -36,7 +37,8 @@ import { AuthModule } from 'src/auth/auth.module';
 		ProyectosModule,
 		TipoReclamoModule,
 		AreasResponsablesModule,
-        AuthModule
+		AuthModule,
+		HistorialModule
 	],
 	controllers: [ReclamoController, ReclamoEncargadoController],
 	providers: [
@@ -64,5 +66,5 @@ import { AuthModule } from 'src/auth/auth.module';
 		'IImagenService',
 	],
 })
-export class ReclamoModule {}
+export class ReclamoModule { }
 

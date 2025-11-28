@@ -32,6 +32,7 @@ export interface IReclamoController {
   reassignArea(
     id: string,
     nuevaAreaId: string,
+    req: RequestWithUser,
   ): Promise<ReclamoResponseDto>;
 
   getDeletedReclamos(): Promise<ReclamoResponseDto[]>;

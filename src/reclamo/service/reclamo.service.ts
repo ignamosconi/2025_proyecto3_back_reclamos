@@ -29,6 +29,8 @@ import { Reclamo } from '../schemas/reclamo.schema';
 import { PaginatedReclamoResponseDto } from '../dto/pag-reclamo-response.dto';
 import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
 import { ReclamoResponseDto } from '../dto/reclamo-response.dto';
+import { HistorialService } from 'src/historial/historial.service';
+import { AccionesHistorial } from 'src/historial/helpers/acciones-historial.enum';
 
 @Injectable()
 export class ReclamoService implements IReclamoService {
@@ -48,6 +50,7 @@ export class ReclamoService implements IReclamoService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(IImagenRepository)
     private readonly imagenRepository: IImagenRepository,
+    private readonly historialService: HistorialService,
   ) { }
 
   // ==================================================================
@@ -89,7 +92,7 @@ export class ReclamoService implements IReclamoService {
     }
 
     // 3. Crear Reclamo
-    const nuevoReclamo = await this.reclamoRepository.create(data, userId, areaId);
+    const createdReclamo = await this.reclamoRepository.create(data, userId, areaId);
 
     // 4. Guardar Imagen si existe
     if (file) {
@@ -98,16 +101,23 @@ export class ReclamoService implements IReclamoService {
           file.originalname,
           file.mimetype,
           file.buffer,
-          String(nuevoReclamo._id)
+          String(createdReclamo._id)
         );
       } catch (error) {
         this.logger.error('Error saving image:', error);
       }
     }
 
-    // TODO: Emitir evento para módulo Historial (CREACION)
+    // 5. Crear Historial
+    await this.historialService.create(
+      String(createdReclamo._id),
+      AccionesHistorial.CREACION,
+      'Reclamo creado exitosamente.',
+      userId,
+      { estado_anterior: null, estado_nuevo: createdReclamo.estado },
+    );
 
-    return nuevoReclamo;
+    return createdReclamo;
   }
 
   async findAll(query: GetReclamoQueryDto, userId: string, userRole?: string): Promise<PaginatedReclamoResponseDto> {
@@ -171,28 +181,26 @@ export class ReclamoService implements IReclamoService {
     const reclamo = await this.validateOwnershipAndStatus(id, userId, EstadoReclamo.PENDIENTE);
 
     // 2. Actualizar
-    const updated = await this.reclamoRepository.update(id, data);
+    const updatedReclamo = await this.reclamoRepository.update(id, data);
 
-    if (!updated) {
+    if (!updatedReclamo) {
       throw new NotFoundException(`Fallo al actualizar el Reclamo con ID ${id}.`);
     }
 
-    // TODO: Emitir evento para módulo Historial (MODIFICACION)
+    // Emitir evento para módulo Historial (MODIFICACION) - REMOVIDO POR REQUERIMIENTO
 
-    return updated;
+    return updatedReclamo;
   }
 
   async softDelete(id: string, userId: string): Promise<Reclamo> {
     // 1. Validar propiedad y estado
-    await this.validateOwnershipAndStatus(id, userId, EstadoReclamo.PENDIENTE);
+    const reclamo = await this.validateOwnershipAndStatus(id, userId, EstadoReclamo.PENDIENTE);
 
     // 2. Eliminar lógicamente
     const deleted = await this.reclamoRepository.softDelete(id);
     if (!deleted) {
       throw new NotFoundException(`Fallo al eliminar lógicamente el Reclamo con ID ${id}.`);
     }
-
-    // TODO: Emitir evento para módulo Historial (ELIMINACION_LOGICA)
 
     return deleted;
   }
@@ -210,7 +218,8 @@ export class ReclamoService implements IReclamoService {
       throw new NotFoundException(`Fallo al restaurar el Reclamo con ID ${id}.`);
     }
 
-    // TODO: Emitir evento para módulo Historial (RESTAURACION)
+    // Emitir evento para módulo Historial (RESTAURACION) - REMOVIDO POR REQUERIMIENTO
+
     return restored;
   }
 
@@ -228,22 +237,59 @@ export class ReclamoService implements IReclamoService {
 
     // 2. Actualizar Area y poner en Pendiente
     const updated = await this.reclamoRepository.updateArea(reclamoId, nuevaAreaId);
+    if (!updated) throw new NotFoundException('Reclamo no encontrado');
+
+    return updated;
+  }
+
+  async reassignAreaWithActor(reclamoId: string, nuevaAreaId: string, actorId: string): Promise<Reclamo> {
+    const reclamo = await this.reclamoRepository.findById(reclamoId, false);
+    if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
+
+    const estadoAnterior = reclamo.estado;
+
+    // 1. Limpiar encargados
+    await this.reclamoRepository.clearEncargados(reclamoId);
+
+    // 2. Actualizar Area y poner en Pendiente
+    const updated = await this.reclamoRepository.updateArea(reclamoId, nuevaAreaId);
 
     if (!updated) throw new NotFoundException('Reclamo no encontrado');
 
-    // TODO: Historial (REASIGNACION_AREA)
+    // Historial (CAMBIO_AREA)
+    await this.historialService.create(
+      reclamoId,
+      AccionesHistorial.CAMBIO_AREA,
+      `Área reasignada.`,
+      actorId
+    );
+
+    // Historial (CAMBIO_ESTADO)
+    if (estadoAnterior !== EstadoReclamo.PENDIENTE) {
+      await this.historialService.create(
+        reclamoId,
+        AccionesHistorial.CAMBIO_ESTADO,
+        `Estado cambiado de ${estadoAnterior} a ${EstadoReclamo.PENDIENTE} por reasignación de área.`,
+        actorId,
+        {
+          estado_anterior: estadoAnterior,
+          estado_actual: EstadoReclamo.PENDIENTE,
+        }
+      );
+    }
 
     return updated;
   }
 
   async changeState(reclamoId: string, data: import('../dto/change-state.dto').ChangeStateDto, actorId: string, actorRole: string): Promise<Reclamo> {
-    const { estado, sintesis } = data;
+    const { estado: nuevoEstado, sintesis } = data;
 
     const reclamo = await this.reclamoRepository.findById(reclamoId, false);
     if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
 
+    console.log('Reclamo encontrado:', reclamo);
     // No permitir cambios si está en estado final
-    if (reclamo.estado === (EstadoReclamo.RESUELTO) || reclamo.estado === (EstadoReclamo.RECHAZADO)) {
+    if (reclamo.estado === EstadoReclamo.RESUELTO || reclamo.estado === EstadoReclamo.RECHAZADO) {
       throw new BadRequestException('No es posible cambiar el estado de un reclamo en estado final.');
     }
 
@@ -259,15 +305,30 @@ export class ReclamoService implements IReclamoService {
     }
 
     // Requerir síntesis cuando se pasa a estados finales
-    if ((estado === EstadoReclamo.RESUELTO || estado === EstadoReclamo.RECHAZADO) && !sintesis) {
-      throw new BadRequestException('Se requiere síntesis/motivo al marcar el reclamo como Resuelto o Rechazado.');
+    if ((nuevoEstado === EstadoReclamo.RESUELTO || nuevoEstado === EstadoReclamo.RECHAZADO) && !sintesis) {
+      throw new BadRequestException('Se requiere síntesis/motivo al marcar el reclamo como Resuelto, Rechazado.');
     }
 
     // Actualizar estado
-    const updated = await this.reclamoRepository.updateEstado(reclamoId, estado);
+    const updated = await this.reclamoRepository.updateEstado(reclamoId, nuevoEstado);
     if (!updated) throw new NotFoundException('Fallo al actualizar el estado del reclamo');
 
-    // TODO: Emitir evento para Historial con { prevEstado, nuevoEstado, actorId, actorRole, sintesis }
+    // Emitir evento para Historial con { prevEstado, nuevoEstado, actorId, actorRole, sintesis }
+    console.log('Creating history for state change:', { reclamoId: reclamo._id, actorId, prev: reclamo.estado, next: nuevoEstado });
+    try {
+      await this.historialService.create(
+        reclamoId,
+        AccionesHistorial.CAMBIO_ESTADO,
+        `Estado cambiado de ${reclamo.estado} a ${nuevoEstado}. ${sintesis ? 'Motivo: ' + sintesis : ''}`,
+        actorId,
+        {
+          estado_anterior: reclamo.estado,
+          estado_actual: nuevoEstado,
+        }
+      );
+    } catch (error) {
+      this.logger.error(`Error creating history for reclamo ${reclamoId}: ${error.message}`, error.stack);
+    }
 
     return updated;
   }

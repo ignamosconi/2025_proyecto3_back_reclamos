@@ -7,6 +7,8 @@ import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../../users/schemas/user.schema';
+import { HistorialService } from 'src/historial/historial.service';
+import { AccionesHistorial } from '../../historial/helpers/acciones-historial.enum';
 
 @Injectable()
 export class ReclamoEncargadoService {
@@ -18,7 +20,8 @@ export class ReclamoEncargadoService {
     private readonly reclamoEncargadoRepository: IReclamoEncargadoRepository,
 
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
-  ) {}
+    private readonly historialService: HistorialService,
+  ) { }
 
   async autoAssign(reclamoId: string, encargadoId: string): Promise<Reclamo> {
     // Validar existencia del reclamo
@@ -44,7 +47,26 @@ export class ReclamoEncargadoService {
     const updated = await this.reclamoRepository.updateEstadoToEnRevision(reclamoId);
     if (!updated) throw new NotFoundException('Fallo al actualizar el estado del reclamo');
 
-    // TODO: Emitir evento para Historial (ASIGNACION_AUTOMATICA)
+    // Emitir evento para Historial (ASIGNACION_AUTOMATICA)
+    await this.historialService.create(
+      reclamoId,
+      AccionesHistorial.AUTOASIGNAR,
+      'El usuario se ha auto-asignado al reclamo.',
+      encargadoId
+    );
+
+    // Emitir evento para Historial (CAMBIO_ESTADO)
+    // Al auto-asignarse, pasa de PENDIENTE a EN_REVISION
+    await this.historialService.create(
+      reclamoId,
+      AccionesHistorial.CAMBIO_ESTADO,
+      `Estado cambiado de ${EstadoReclamo.PENDIENTE} a ${EstadoReclamo.EN_REVISION} por auto-asignación.`,
+      encargadoId,
+      {
+        estado_anterior: EstadoReclamo.PENDIENTE,
+        estado_actual: EstadoReclamo.EN_REVISION,
+      }
+    );
 
     return updated;
   }
@@ -78,17 +100,59 @@ export class ReclamoEncargadoService {
     }
 
     // Si se agregaron encargados, asegurar estado EN_REVISION
-    if (addedCount > 0) {
+    let nuevoEstado: EstadoReclamo | null = null;
+    const estadoAnterior = reclamo.estado;
+
+    if (addedCount > 0 && reclamo.estado === EstadoReclamo.PENDIENTE) {
       await this.reclamoRepository.updateEstadoToEnRevision(reclamoId);
+      nuevoEstado = EstadoReclamo.EN_REVISION;
     }
 
     // Si tras la operación no quedan encargados, volver a PENDIENTE
     const remaining = await this.reclamoEncargadoRepository.countEncargadosByReclamo(reclamoId);
-    if (remaining === 0) {
+    if (remaining === 0 && reclamo.estado !== EstadoReclamo.PENDIENTE) {
       await this.reclamoRepository.updateEstado(reclamoId, EstadoReclamo.PENDIENTE);
+      nuevoEstado = EstadoReclamo.PENDIENTE;
     }
 
-    // TODO: Emitir evento para Historial (ACTUALIZACION_EQUIPO) con adminId y cambios
+    // Emitir evento para Historial (CAMBIO_ESTADO) si hubo cambio
+    if (nuevoEstado) {
+      await this.historialService.create(
+        reclamoId,
+        AccionesHistorial.CAMBIO_ESTADO,
+        `Estado cambiado de ${estadoAnterior} a ${nuevoEstado} por actualización de equipo.`,
+        adminId,
+        {
+          estado_anterior: estadoAnterior,
+          estado_actual: nuevoEstado,
+        }
+      );
+    }
+
+    // Emitir evento para Historial (ACTUALIZACION_EQUIPO) con adminId y cambios
+    if (data.addEncargadosIds && data.addEncargadosIds.length > 0) {
+      await this.historialService.create(
+        reclamoId,
+        AccionesHistorial.AGREGAR_ENCARGADO,
+        `Se agregaron encargados: ${data.addEncargadosIds.join(', ')}`,
+        adminId
+      );
+    }
+    if (data.removeEncargadosIds && data.removeEncargadosIds.length > 0) {
+      await this.historialService.create(
+        reclamoId,
+        AccionesHistorial.ELIMINAR_ENCARGADO,
+        `Se eliminaron encargados: ${data.removeEncargadosIds.join(', ')}`,
+        adminId
+      );
+    }
   }
 
+  async getEncargados(reclamoId: string): Promise<any[]> {
+    const reclamo = await this.reclamoRepository.findById(reclamoId, false);
+    if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
+
+    const encargados = await this.reclamoEncargadoRepository.findEncargadosByReclamo(reclamoId);
+    return encargados.map(e => e.fkEncargado);
+  }
 }

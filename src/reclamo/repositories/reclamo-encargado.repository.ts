@@ -11,7 +11,7 @@ export class ReclamoEncargadoRepository implements IReclamoEncargadoRepository {
   constructor(
     @InjectModel(ReclamoEncargado.name)
     private readonly model: Model<ReclamoEncargado>,
-  ) {}
+  ) { }
 
   async assignEncargado(reclamoId: string, encargadoId: string): Promise<ReclamoEncargado> {
     const createdAssignment = new this.model({
@@ -55,5 +55,12 @@ export class ReclamoEncargadoRepository implements IReclamoEncargadoRepository {
       .exec();
 
     return results.map((doc) => doc.fkEncargado.toString());
+  }
+
+  async findEncargadosByReclamo(reclamoId: string): Promise<ReclamoEncargado[]> {
+    return this.model
+      .find({ fkReclamo: new Types.ObjectId(reclamoId) })
+      .populate('fkEncargado', 'firstName lastName email role') // Poblar datos del usuario
+      .exec();
   }
 }
