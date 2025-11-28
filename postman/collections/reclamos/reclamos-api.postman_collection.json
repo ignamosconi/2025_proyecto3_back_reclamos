@@ -1,0 +1,515 @@
+{
+     "info": {
+          "_postman_id": "reclamos-api-collection",
+          "name": "Reclamos API",
+          "description": "Colección para probar los endpoints del módulo de Reclamos.",
+          "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+     },
+     "variable": [
+          {
+               "key": "baseUrl",
+               "value": "http://localhost:3000",
+               "type": "string"
+          },
+          {
+               "key": "accessToken",
+               "value": "",
+               "type": "string"
+          }
+     ],
+     "item": [
+          {
+               "name": "Auth",
+               "item": [
+                    {
+                         "name": "Login Cliente",
+                         "event": [
+                              {
+                                   "listen": "test",
+                                   "script": {
+                                        "exec": [
+                                             "var jsonData = pm.response.json();",
+                                             "pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);",
+                                             "console.log(\"Access Token set:\", jsonData.accessToken);"
+                                        ],
+                                        "type": "text/javascript"
+                                   }
+                              }
+                         ],
+                         "request": {
+                              "method": "POST",
+                              "header": [],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n    \"email\": \"cliente1@test.com\",\n    \"password\": \"Utnfrvm123!\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              },
+                              "url": {
+                                   "raw": "{{baseUrl}}/auth/login",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "auth",
+                                        "login"
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Login Encargado",
+                         "event": [
+                              {
+                                   "listen": "test",
+                                   "script": {
+                                        "exec": [
+                                             "var jsonData = pm.response.json();",
+                                             "pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);"
+                                        ],
+                                        "type": "text/javascript"
+                                   }
+                              }
+                         ],
+                         "request": {
+                              "method": "POST",
+                              "header": [],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n    \"email\": \"encargado1@test.com\",\n    \"password\": \"Utnfrvm123!\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              },
+                              "url": {
+                                   "raw": "{{baseUrl}}/auth/login",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "auth",
+                                        "login"
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Login Gerente",
+                         "event": [
+                              {
+                                   "listen": "test",
+                                   "script": {
+                                        "exec": [
+                                             "var jsonData = pm.response.json();",
+                                             "pm.collectionVariables.set(\"accessToken\", jsonData.accessToken);"
+                                        ],
+                                        "type": "text/javascript"
+                                   }
+                              }
+                         ],
+                         "request": {
+                              "method": "POST",
+                              "header": [],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n    \"email\": \"gerente1@test.com\",\n    \"password\": \"Utnfrvm123!\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              },
+                              "url": {
+                                   "raw": "{{baseUrl}}/auth/login",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "auth",
+                                        "login"
+                                   ]
+                              }
+                         },
+                         "response": []
+                    }
+               ]
+          },
+          {
+               "name": "Reclamos",
+               "item": [
+                    {
+                         "name": "Crear Reclamo (con imagen)",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "POST",
+                              "header": [],
+                              "body": {
+                                   "mode": "formdata",
+                                   "formdata": [
+                                        {
+                                             "key": "titulo",
+                                             "value": "Problema con el servidor",
+                                             "type": "text"
+                                        },
+                                        {
+                                             "key": "descripcion",
+                                             "value": "El servidor se cae constantemente.",
+                                             "type": "text"
+                                        },
+                                        {
+                                             "key": "prioridad",
+                                             "value": "alta",
+                                             "type": "text"
+                                        },
+                                        {
+                                             "key": "criticidad",
+                                             "value": "SÍ",
+                                             "type": "text"
+                                        },
+                                        {
+                                             "key": "fkProyecto",
+                                             "value": "6928f847dd9173eead1f259a",
+                                             "type": "text",
+                                             "description": "ID de proyecto existente"
+                                        },
+                                        {
+                                             "key": "fkTipoReclamo",
+                                             "value": "6928f847dd9173eead1f2569",
+                                             "type": "text",
+                                             "description": "ID de tipo de reclamo existente"
+                                        },
+                                        {
+                                             "key": "imagen",
+                                             "type": "file",
+                                             "src": []
+                                        }
+                                   ]
+                              },
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos"
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Listar Reclamos",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "GET",
+                              "header": [],
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos?page=1&limit=10",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos"
+                                   ],
+                                   "query": [
+                                        {
+                                             "key": "page",
+                                             "value": "1"
+                                        },
+                                        {
+                                             "key": "limit",
+                                             "value": "10"
+                                        }
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Obtener Reclamo por ID",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "GET",
+                              "header": [],
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos/:id",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos",
+                                        ":id"
+                                   ],
+                                   "variable": [
+                                        {
+                                             "key": "id",
+                                             "value": "REPLACE_WITH_ID"
+                                        }
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Actualizar Reclamo",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "PUT",
+                              "header": [],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n    \"titulo\": \"Título Actualizado\",\n    \"descripcion\": \"Descripción actualizada\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              },
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos/:id",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos",
+                                        ":id"
+                                   ],
+                                   "variable": [
+                                        {
+                                             "key": "id",
+                                             "value": "REPLACE_WITH_ID"
+                                        }
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Eliminar Reclamo (Soft Delete)",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "DELETE",
+                              "header": [],
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos/:id",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos",
+                                        ":id"
+                                   ],
+                                   "variable": [
+                                        {
+                                             "key": "id",
+                                             "value": "REPLACE_WITH_ID"
+                                        }
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Restaurar Reclamo",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "POST",
+                              "header": [],
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos/:id/restore",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos",
+                                        ":id",
+                                        "restore"
+                                   ],
+                                   "variable": [
+                                        {
+                                             "key": "id",
+                                             "value": "REPLACE_WITH_ID"
+                                        }
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Listar Eliminados (Gerente)",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "GET",
+                              "header": [],
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos/deleted",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos",
+                                        "deleted"
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Auto Asignar Encargado",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "POST",
+                              "header": [],
+                              "body": {
+                                   "mode": "raw",
+                                   "raw": "{\n    \"encargadoId\": \"ENCARGADO_ID_HERE\"\n}",
+                                   "options": {
+                                        "raw": {
+                                             "language": "json"
+                                        }
+                                   }
+                              },
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos/:id/encargados/auto-assign",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos",
+                                        ":id",
+                                        "encargados",
+                                        "auto-assign"
+                                   ],
+                                   "variable": [
+                                        {
+                                             "key": "id",
+                                             "value": "REPLACE_WITH_ID"
+                                        }
+                                   ]
+                              }
+                         },
+                         "response": []
+                    },
+                    {
+                         "name": "Reasignar Área",
+                         "request": {
+                              "auth": {
+                                   "type": "bearer",
+                                   "bearer": [
+                                        {
+                                             "key": "token",
+                                             "value": "{{accessToken}}",
+                                             "type": "string"
+                                        }
+                                   ]
+                              },
+                              "method": "POST",
+                              "header": [],
+                              "url": {
+                                   "raw": "{{baseUrl}}/reclamos/:reclamoId/reassign-area/:nuevaAreaId",
+                                   "host": [
+                                        "{{baseUrl}}"
+                                   ],
+                                   "path": [
+                                        "reclamos",
+                                        ":reclamoId",
+                                        "reassign-area",
+                                        ":nuevaAreaId"
+                                   ],
+                                   "variable": [
+                                        {
+                                             "key": "reclamoId",
+                                             "value": "REPLACE_WITH_ID"
+                                        },
+                                        {
+                                             "key": "nuevaAreaId",
+                                             "value": "REPLACE_WITH_AREA_ID"
+                                        }
+                                   ]
+                              }
+                         },
+                         "response": []
+                    }
+               ]
+          }
+     ]
+}
