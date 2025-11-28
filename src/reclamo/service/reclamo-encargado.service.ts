@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { IReclamoEncargadoRepository } from '../repositories/interfaces/reclamo-encargado.repository.interface';
 import type { IReclamoRepository } from '../repositories/interfaces/reclamo.repository.interface';
 import { Reclamo } from '../schemas/reclamo.schema';
@@ -24,6 +24,11 @@ export class ReclamoEncargadoService {
     // Validar existencia del reclamo
     const reclamo = await this.reclamoRepository.findById(reclamoId, false);
     if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
+
+    // US 7: Validar que el reclamo esté en PENDIENTE para auto-asignarse
+    if (reclamo.estado !== EstadoReclamo.PENDIENTE) {
+      throw new BadRequestException('El reclamo ya ha sido asignado o procesado.');
+    }
 
     // Validar existencia del usuario/encargado
     const encargado = await this.userModel.findById(encargadoId).exec();

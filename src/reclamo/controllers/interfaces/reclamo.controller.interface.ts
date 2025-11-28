@@ -13,6 +13,7 @@ export interface IReclamoController {
   createReclamo(
     data: CreateReclamoDto,
     req: RequestWithUser, // Request autenticada inyectada por AuthGuard
+    file?: any,
   ): Promise<ReclamoResponseDto>;
 
   findMyReclamos(
@@ -31,18 +32,19 @@ export interface IReclamoController {
   reassignArea(
     id: string,
     nuevaAreaId: string,
-    req: RequestWithUser,
   ): Promise<ReclamoResponseDto>;
+
+  getDeletedReclamos(): Promise<ReclamoResponseDto[]>;
   deleteReclamo(id: string, req: RequestWithUser): Promise<void>;
 
   restoreReclamo(id: string, req: RequestWithUser): Promise<ReclamoResponseDto>;
-  
+
   changeState(
     id: string,
     data: import('../../dto/change-state.dto').ChangeStateDto,
     req: RequestWithUser,
   ): Promise<ReclamoResponseDto>;
-  
+
 }
 
 export const IReclamoController = Symbol('IReclamoController');

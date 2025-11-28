@@ -18,28 +18,31 @@ export class ReclamoRepository implements IReclamoRepository {
     @InjectModel(ReclamoEncargado.name) private readonly reclamoEncargadoModel: Model<ReclamoEncargado>,
     // NOTA: Aquí se inyectarían otros modelos/repositorios (Historial, ReclamoEncargado) 
     // para completar las transacciones de flujo de trabajo (US 8, US 11).
-  ) {}
+  ) { }
 
   async findById(id: string, populate: boolean = false): Promise<Reclamo | null> {
     const query = this.reclamoModel.findById(id);
     if (populate) {
       // Se pueblan las relaciones para la vista de detalle
-      query.populate(['fkCliente', 'fkProyecto', 'fkTipoReclamo', 'fkArea']);
+      // US 6: Ocultar password del cliente
+      query.populate('fkCliente', 'nombre email role');
+      query.populate(['fkProyecto', 'fkTipoReclamo', 'fkArea']);
+
+      // US 7.a: Poblar encargados usando el virtual
+      query.populate({
+        path: 'encargados',
+        populate: { path: 'fkEncargado', select: 'nombre email role' }
+      });
     }
     // NOTA: Se podría añadir un filtro { deletedAt: null } si se quiere ocultar el soft-deleted por defecto.
     const reclamo = await query.exec();
-    
-    // Si el reclamo existe y se pide populate, traer también los encargados asignados
-    if (reclamo && populate) {
-      const reclamoEncargados = await this.reclamoEncargadoModel
-        .find({ fkReclamo: id })
-        .populate('fkEncargado', 'nombre email role')
-        .exec();
-      
-      // Transformar los datos para que queden en un array de encargados
-      (reclamo as any).encargados = reclamoEncargados.map((re) => re.fkEncargado);
+
+    // Si el reclamo existe y se pide populate, transformar los encargados
+    if (reclamo && populate && (reclamo as any).encargados) {
+      // El virtual devuelve ReclamoEncargado[], extraemos el usuario (fkEncargado)
+      (reclamo as any).encargados = (reclamo as any).encargados.map((re: any) => re.fkEncargado);
     }
-    
+
     return reclamo;
   }
 
@@ -86,7 +89,7 @@ export class ReclamoRepository implements IReclamoRepository {
       { new: true },
     ).exec();
   }
-  
+
   async restore(id: string): Promise<Reclamo | null> {
     // Restaura un reclamo, quitando la marca de eliminación lógica
     return this.reclamoModel.findByIdAndUpdate(
@@ -94,6 +97,10 @@ export class ReclamoRepository implements IReclamoRepository {
       { $set: { deletedAt: null } },
       { new: true },
     ).exec();
+  }
+
+  async findDeleted(): Promise<Reclamo[]> {
+    return this.reclamoModel.find({ deletedAt: { $ne: null } }).exec();
   }
 
   // --- Listado y Paginación (US 7) ---
@@ -104,7 +111,7 @@ export class ReclamoRepository implements IReclamoRepository {
 
     // Si fkClienteId está definido, filtra por cliente (es Cliente). Si no está, devuelve todos (es Encargado/Gerente).
     const filter: any = { deletedAt: null };
-    
+
     if (fkClienteId) {
       filter.fkCliente = fkClienteId;
     }
@@ -118,22 +125,27 @@ export class ReclamoRepository implements IReclamoRepository {
       if (fechaInicio) filter.createdAt.$gte = new Date(fechaInicio);
       if (fechaFin) filter.createdAt.$lte = new Date(fechaFin);
     }
-    
+
     const [data, total] = await Promise.all([
-      this.reclamoModel.find(filter).skip(skip).limit(limit).sort({ createdAt: -1 }).exec(),
+      this.reclamoModel.find(filter)
+        .populate({
+          path: 'encargados',
+          populate: { path: 'fkEncargado', select: 'nombre email role' }
+        })
+        .skip(skip).limit(limit).sort({ createdAt: -1 }).exec(),
       this.reclamoModel.countDocuments(filter).exec(),
     ]);
 
     return { data, total, page, limit };
   }
-  
+
   // --- Métodos de Flujo de Trabajo (US 8, US 11) ---
 
   async updateArea(reclamoId: string, nuevaAreaId: string): Promise<Reclamo | null> {
     return this.reclamoModel.findByIdAndUpdate(
       reclamoId,
-      { 
-        $set: { fkArea: nuevaAreaId, estado: EstadoReclamo.PENDIENTE } 
+      {
+        $set: { fkArea: nuevaAreaId, estado: EstadoReclamo.PENDIENTE }
       }, // Tras cambio de área, estado pasa a 'Pendiente' (US 8)
       { new: true },
     ).exec();
@@ -147,15 +159,15 @@ export class ReclamoRepository implements IReclamoRepository {
     ).exec();
   }
 
- async updateEstadoToEnRevision(reclamoId: string): Promise<Reclamo | null> {
+  async updateEstadoToEnRevision(reclamoId: string): Promise<Reclamo | null> {
     //solo actualiza el estado del Reclamo (US 11).
     // La asignación real N:M ocurre en reclamo-encargado.
     return this.reclamoModel.findByIdAndUpdate(
-        reclamoId,
-        { $set: { estado: EstadoReclamo.EN_REVISION } },
-        { new: true },
+      reclamoId,
+      { $set: { estado: EstadoReclamo.EN_REVISION } },
+      { new: true },
     ).exec();
-    }
+  }
 
   async clearEncargados(reclamoId: string): Promise<void> {
     // Elimina todas las asignaciones N:M (Reclamo <-> Encargado) para el reclamo dado.

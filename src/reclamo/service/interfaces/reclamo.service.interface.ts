@@ -15,7 +15,7 @@ export interface IReclamoService {
   /**
    * Crea un nuevo reclamo asociado al cliente y al área del proyecto seleccionado.
    */
-  create(data: CreateReclamoDto, userId: string): Promise<Reclamo>;
+  create(data: CreateReclamoDto, userId: string, file?: any): Promise<Reclamo>;
 
   /**
    * Obtiene la lista de reclamos paginada y filtrada.
@@ -45,6 +45,8 @@ export interface IReclamoService {
    * Restaura un reclamo eliminado lógicamente.
    */
   restore(id: string, userId: string): Promise<Reclamo>;
+
+  findDeleted(): Promise<Reclamo[]>;
 
   // ==================================================================
   // LÓGICA DE FLUJO DE TRABAJO (US 11, US 12, US 8)

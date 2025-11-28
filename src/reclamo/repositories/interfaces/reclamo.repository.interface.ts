@@ -19,6 +19,7 @@ export interface IReclamoRepository {
   clearEncargados(reclamoId: string): Promise<void>;
   softDelete(id: string): Promise<Reclamo | null>;
   restore(id: string): Promise<Reclamo | null>;
+  findDeleted(): Promise<Reclamo[]>;
 }
 
 // Token de inyección para NestJS

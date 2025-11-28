@@ -15,7 +15,10 @@ import {
   Req,
   HttpStatus,
   HttpCode,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -45,8 +48,8 @@ import type { RequestWithUser } from 'src/auth/interfaces/request-with-user.inte
 import { UserRole } from 'src/users/helpers/enum.roles';
 
 
-@ApiTags('Reclamos') 
-@ApiBearerAuth() 
+@ApiTags('Reclamos')
+@ApiBearerAuth()
 @Controller('reclamos')
 export class ReclamoController implements IReclamoController {
   constructor(
@@ -54,7 +57,7 @@ export class ReclamoController implements IReclamoController {
     private readonly reclamoService: IReclamoService,
     @Inject('IImagenService')
     private readonly imagenService: IImagenService,
-  ) {}
+  ) { }
 
   // ==================================================================
   // LÓGICA DEL CLIENTE (US 7)
@@ -67,13 +70,15 @@ export class ReclamoController implements IReclamoController {
   @ApiResponse({ status: HttpStatus.CREATED, type: ReclamoResponseDto })
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRole.CLIENTE)
+  @UseInterceptors(FileInterceptor('imagen'))
   async createReclamo(
     @Body() data: CreateReclamoDto,
     @Req() req: RequestWithUser,
+    @UploadedFile() file: any,
   ): Promise<ReclamoResponseDto> {
     // Nota: La validación de fkProyecto en el DTO se recomienda hacer con class-validator + Pipe global
-  const userId = String((req.user as any)._id);
-    const newReclamo = await this.reclamoService.create(data, userId);
+    const userId = String((req.user as any)._id);
+    const newReclamo = await this.reclamoService.create(data, userId, file);
     return newReclamo.toObject() as ReclamoResponseDto;
   }
 
@@ -95,7 +100,17 @@ export class ReclamoController implements IReclamoController {
     const updated = await this.reclamoService.changeState(id, data, actorId, actorRole);
     return updated.toObject() as ReclamoResponseDto;
   }
-  
+
+  @Get('deleted')
+  @ApiOperation({ summary: 'Obtiene reclamos eliminados lógicamente' })
+  @ApiResponse({ status: HttpStatus.OK, type: [ReclamoResponseDto] })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.GERENTE) // Asumo que solo gerentes pueden ver eliminados, o tal vez cliente? Feedback no especifica rol.
+  async getDeletedReclamos(): Promise<ReclamoResponseDto[]> {
+    const reclamos = await this.reclamoService.findDeleted();
+    return reclamos.map(r => r.toObject() as ReclamoResponseDto);
+  }
+
   @Get()
   @ApiOperation({ summary: 'Obtiene el listado de reclamos. Clientes ven solo los suyos; Encargados/Gerentes ven todos.' })
   @ApiQuery({ type: GetReclamoQueryDto })
@@ -180,7 +195,7 @@ export class ReclamoController implements IReclamoController {
   // LÓGICA DE FLUJO DE TRABAJO (Encargado/Admin)
   // ==================================================================
   // Reasigna el reclamo a una nueva área y limpia encargados
-  @Post('reassign-area/:nuevaAreaId')
+  @Post(':reclamoId/reassign-area/:nuevaAreaId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Reasigna el reclamo a una nueva área y limpia encargados' })
   @ApiParam({ name: 'reclamoId', type: 'string' })
@@ -191,8 +206,8 @@ export class ReclamoController implements IReclamoController {
   async reassignArea(
     @Param('reclamoId', ParseObjectIdPipe) reclamoId: string,
     @Param('nuevaAreaId', ParseObjectIdPipe) nuevaAreaId: string,
-    @Req() req: RequestWithUser,
   ): Promise<ReclamoResponseDto> {
+    console.log('Reassign Area');
     // Nota: El servicio central maneja la lógica de reasignación (limpia encargados y actualiza área)
     const updated = await this.reclamoService.reassignArea(reclamoId, nuevaAreaId);
     return updated.toObject() as ReclamoResponseDto;
@@ -213,6 +228,7 @@ export class ReclamoController implements IReclamoController {
     @Body() data: UpdateImagenDto,
     @Req() req: RequestWithUser,
   ) {
+    console.log('Update Imagen');
     const actorId = String((req.user as any)._id);
     const updated = await this.imagenService.update(id, imagenId, data, actorId);
     return (updated as any).toObject ? (updated as any).toObject() : updated;

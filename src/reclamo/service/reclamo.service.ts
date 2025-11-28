@@ -34,7 +34,7 @@ export class ReclamoService implements IReclamoService {
   constructor(
     @Inject('IReclamoRepository')
     private readonly reclamoRepository: IReclamoRepository,
-    
+
     @Inject('IReclamoEncargadoRepository')
     private readonly reclamoEncargadoRepository: IReclamoEncargadoRepository,
 
@@ -45,14 +45,14 @@ export class ReclamoService implements IReclamoService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(IImagenRepository)
     private readonly imagenRepository: IImagenRepository,
-  ) {}
+  ) { }
 
   // ==================================================================
   // LÓGICA DEL CLIENTE (US 7)
   // ==================================================================
 
   async create(data: CreateReclamoDto, userId: string): Promise<Reclamo> {
-    
+
     // 1. Validar Cliente (Usuario logueado)
     const clienteExists = await this.userModel.exists({ _id: userId });
     if (!clienteExists) {
@@ -65,7 +65,7 @@ export class ReclamoService implements IReclamoService {
     try {
       const proyecto = await this.proyectosService.findById(data.fkProyecto);
       if (!proyecto) { // Doble check por seguridad
-         throw new NotFoundException('El proyecto indicado no existe.');
+        throw new NotFoundException('El proyecto indicado no existe.');
       }
       // Convertimos a string por seguridad. El campo `areaResponsable` puede venir como ObjectId
       // o como documento poblado (objeto). En el segundo caso extraemos su _id.
@@ -80,16 +80,16 @@ export class ReclamoService implements IReclamoService {
       }
 
     } catch (error) {
-       // Capturamos errores del servicio de proyectos
-       if (error instanceof NotFoundException) throw error;
-       throw new BadRequestException('Error al validar el proyecto asociado.');
+      // Capturamos errores del servicio de proyectos
+      if (error instanceof NotFoundException) throw error;
+      throw new BadRequestException('Error al validar el proyecto asociado.');
     }
 
     // 3. Crear Reclamo
     const nuevoReclamo = await this.reclamoRepository.create(data, userId, areaId);
 
     // TODO: Emitir evento para módulo Historial (CREACION)
-    
+
     return nuevoReclamo;
   }
 
@@ -98,21 +98,21 @@ export class ReclamoService implements IReclamoService {
     const isClient = userRole === 'Cliente';
     const clientIdFilter: string | undefined = isClient ? userId : undefined;
     const result = await this.reclamoRepository.findAllPaginated(query, clientIdFilter);
-    
+
     // Determinar si el usuario es staff
     const isStaff = userRole === 'ENCARGADO' || userRole === 'GERENTE';
-    
+
     return {
       // Mapeamos cada documento de Mongoose al formato del DTO
       data: result.data.map((reclamo) => {
         // toObject() convierte el Documento de Mongoose a un objeto plano de JS
-        const doc = reclamo.toObject(); 
-        
+        const doc = reclamo.toObject();
+
         // Solo mostrar encargados si es staff
         if (!isStaff) {
           doc.encargados = undefined;
         }
-        
+
         return {
           ...doc,
           // Aseguramos que _id sea string (en el DTO es string, en Mongoose es ObjectId)
@@ -148,15 +148,18 @@ export class ReclamoService implements IReclamoService {
 
   async update(id: string, data: UpdateReclamoDto, userId: string): Promise<Reclamo> {
     // 1. Validar propiedad y estado
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('El cuerpo de la solicitud no puede estar vacío.');
+    }
     const reclamo = await this.validateOwnershipAndStatus(id, userId, EstadoReclamo.PENDIENTE);
 
     // 2. Actualizar
     const updated = await this.reclamoRepository.update(id, data);
 
     if (!updated) {
-        throw new NotFoundException(`Fallo al actualizar el Reclamo con ID ${id}.`);
+      throw new NotFoundException(`Fallo al actualizar el Reclamo con ID ${id}.`);
     }
-    
+
     // TODO: Emitir evento para módulo Historial (MODIFICACION)
 
     return updated;
@@ -169,9 +172,9 @@ export class ReclamoService implements IReclamoService {
     // 2. Eliminar lógicamente
     const deleted = await this.reclamoRepository.softDelete(id);
     if (!deleted) {
-        throw new NotFoundException(`Fallo al eliminar lógicamente el Reclamo con ID ${id}.`);
+      throw new NotFoundException(`Fallo al eliminar lógicamente el Reclamo con ID ${id}.`);
     }
-    
+
     // TODO: Emitir evento para módulo Historial (ELIMINACION_LOGICA)
 
     return deleted;
@@ -180,18 +183,22 @@ export class ReclamoService implements IReclamoService {
   async restore(id: string, userId: string): Promise<Reclamo> {
     // Para restaurar, no validamos estado PENDIENTE, solo propiedad.
     const reclamo = await this.reclamoRepository.findById(id, false);
-    
+
     if (!reclamo) throw new NotFoundException(`Reclamo con ID ${id} no encontrado.`);
     if (reclamo.fkCliente.toString() !== userId) throw new ForbiddenException('No tienes permiso para acceder a este reclamo.');
     if (!reclamo.deletedAt) throw new BadRequestException('El reclamo no está eliminado.');
 
     const restored = await this.reclamoRepository.restore(id);
     if (!restored) {
-        throw new NotFoundException(`Fallo al restaurar el Reclamo con ID ${id}.`);
+      throw new NotFoundException(`Fallo al restaurar el Reclamo con ID ${id}.`);
     }
 
     // TODO: Emitir evento para módulo Historial (RESTAURACION)
     return restored;
+  }
+
+  async findDeleted(): Promise<Reclamo[]> {
+    return this.reclamoRepository.findDeleted();
   }
 
   // ==================================================================
@@ -201,11 +208,11 @@ export class ReclamoService implements IReclamoService {
   async reassignArea(reclamoId: string, nuevaAreaId: string): Promise<Reclamo> {
     // 1. Limpiar encargados
     await this.reclamoRepository.clearEncargados(reclamoId);
-    
+
     // 2. Actualizar Area y poner en Pendiente
     const updated = await this.reclamoRepository.updateArea(reclamoId, nuevaAreaId);
-    
-    if(!updated) throw new NotFoundException('Reclamo no encontrado');
+
+    if (!updated) throw new NotFoundException('Reclamo no encontrado');
 
     // TODO: Historial (REASIGNACION_AREA)
 
@@ -247,9 +254,9 @@ export class ReclamoService implements IReclamoService {
 
     return updated;
   }
-  
 
-  async updateImagen(reclamoId: string, imagenId: string, data: import('../dto/update-imagen.dto').UpdateImagenDto, actorId: string) : Promise<import('../schemas/imagen.schema').Imagen> {
+
+  async updateImagen(reclamoId: string, imagenId: string, data: import('../dto/update-imagen.dto').UpdateImagenDto, actorId: string): Promise<import('../schemas/imagen.schema').Imagen> {
     // Verificar que el actor es dueño del reclamo y que está en PENDIENTE
     await this.validateOwnershipAndStatus(reclamoId, actorId, EstadoReclamo.PENDIENTE);
 

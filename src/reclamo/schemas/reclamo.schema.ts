@@ -12,7 +12,7 @@ import { Criticidad } from '../enums/criticidad.enum';
 import { EstadoReclamo } from '../enums/estado.enum';
 
 
-@Schema({ timestamps: true }) 
+@Schema({ timestamps: true })
 export class Reclamo extends Document {
 
   @ApiProperty({ example: 'Fallo en la carga del módulo A' })
@@ -57,3 +57,13 @@ export class Reclamo extends Document {
 }
 
 export const ReclamoSchema = SchemaFactory.createForClass(Reclamo);
+
+ReclamoSchema.virtual('encargados', {
+  ref: 'ReclamoEncargado',
+  localField: '_id',
+  foreignField: 'fkReclamo',
+});
+
+// Asegurar que los virtuales se incluyan al convertir a JSON/Object
+ReclamoSchema.set('toObject', { virtuals: true });
+ReclamoSchema.set('toJSON', { virtuals: true });

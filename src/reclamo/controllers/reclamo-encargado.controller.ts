@@ -28,10 +28,12 @@ import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
 import { ReclamoResponseDto } from '../dto/reclamo-response.dto';
 import type { ReclamoEncargadoService } from '../service/reclamo-encargado.service';
 
+import { IReclamoEncargadoController } from './interfaces/reclamo-encargado.controller.interface';
+
 @ApiTags('Reclamo - Encargados')
 @ApiBearerAuth()
 @Controller('reclamos/:reclamoId/encargados')
-export class ReclamoEncargadoController {
+export class ReclamoEncargadoController implements IReclamoEncargadoController {
   constructor(
     @Inject('IReclamoEncargadoService')
     private readonly service: ReclamoEncargadoService,
