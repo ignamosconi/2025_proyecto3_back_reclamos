@@ -7,6 +7,7 @@ import {
   BadRequestException,
   ForbiddenException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -31,6 +32,8 @@ import { ReclamoResponseDto } from '../dto/reclamo-response.dto';
 
 @Injectable()
 export class ReclamoService implements IReclamoService {
+  private readonly logger = new Logger(ReclamoService.name);
+
   constructor(
     @Inject('IReclamoRepository')
     private readonly reclamoRepository: IReclamoRepository,
@@ -98,7 +101,7 @@ export class ReclamoService implements IReclamoService {
           String(nuevoReclamo._id)
         );
       } catch (error) {
-        console.error('Error saving image:', error);
+        this.logger.error('Error saving image:', error);
       }
     }
 
