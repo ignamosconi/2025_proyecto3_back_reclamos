@@ -24,7 +24,6 @@ export class HistorialController {
           @Body('comentario') comentario: string,
           @Request() req,
      ) {
-          console.log('User in request:', req.user);
           const userId = req.user._id;
           return this.historialService.create(
                reclamoId,
