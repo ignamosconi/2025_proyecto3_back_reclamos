@@ -4,7 +4,7 @@ import { Document } from 'mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 import { Reclamo } from './reclamo.schema';
 
-@Schema()
+@Schema({ collection: 'imagenes' })
 export class Imagen extends Document {
   @ApiProperty({ example: 'evidencia-1.png' })
   @Prop({ required: true, type: String })

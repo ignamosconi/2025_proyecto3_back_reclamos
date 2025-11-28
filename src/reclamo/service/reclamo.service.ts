@@ -51,7 +51,7 @@ export class ReclamoService implements IReclamoService {
   // LÓGICA DEL CLIENTE (US 7)
   // ==================================================================
 
-  async create(data: CreateReclamoDto, userId: string): Promise<Reclamo> {
+  async create(data: CreateReclamoDto, userId: string, file?: any): Promise<Reclamo> {
 
     // 1. Validar Cliente (Usuario logueado)
     const clienteExists = await this.userModel.exists({ _id: userId });
@@ -87,6 +87,20 @@ export class ReclamoService implements IReclamoService {
 
     // 3. Crear Reclamo
     const nuevoReclamo = await this.reclamoRepository.create(data, userId, areaId);
+
+    // 4. Guardar Imagen si existe
+    if (file) {
+      try {
+        await this.imagenRepository.create(
+          file.originalname,
+          file.mimetype,
+          file.buffer,
+          String(nuevoReclamo._id)
+        );
+      } catch (error) {
+        console.error('Error saving image:', error);
+      }
+    }
 
     // TODO: Emitir evento para módulo Historial (CREACION)
 
