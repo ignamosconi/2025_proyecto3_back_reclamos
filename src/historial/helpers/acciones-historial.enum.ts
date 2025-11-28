@@ -5,4 +5,5 @@ export enum AccionesHistorial {
   COMENTAR = 'comentar-proyecto',                     //US 15
   CAMBIO_ESTADO = 'modificar-estado-reclamo',         //US 10
   CAMBIO_AREA = 'modificar-area-reclamo',             //US 8
+  CREACION = 'creacion-reclamo',                      //Lo cree porque faltaba este caso
 }
