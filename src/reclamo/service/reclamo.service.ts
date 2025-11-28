@@ -287,7 +287,6 @@ export class ReclamoService implements IReclamoService {
     const reclamo = await this.reclamoRepository.findById(reclamoId, false);
     if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
 
-    console.log('Reclamo encontrado:', reclamo);
     // No permitir cambios si está en estado final
     if (reclamo.estado === EstadoReclamo.RESUELTO || reclamo.estado === EstadoReclamo.RECHAZADO) {
       throw new BadRequestException('No es posible cambiar el estado de un reclamo en estado final.');
@@ -314,7 +313,6 @@ export class ReclamoService implements IReclamoService {
     if (!updated) throw new NotFoundException('Fallo al actualizar el estado del reclamo');
 
     // Emitir evento para Historial con { prevEstado, nuevoEstado, actorId, actorRole, sintesis }
-    console.log('Creating history for state change:', { reclamoId: reclamo._id, actorId, prev: reclamo.estado, next: nuevoEstado });
     try {
       await this.historialService.create(
         reclamoId,

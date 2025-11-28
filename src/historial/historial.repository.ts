@@ -15,7 +15,6 @@ export class HistorialRepository {
      }
 
      async findByReclamoId(reclamoId: string): Promise<Historial[]> {
-          console.log('Searching history for reclamoId:', reclamoId);
           return this.historialModel
                .find({ reclamoId: reclamoId })
                .sort({ fecha_hora: -1 }) // Orden descendente (más reciente primero)

@@ -15,7 +15,6 @@ export class HistorialService {
           responsableId: string | Types.ObjectId,
           metadata?: Record<string, any>,
      ): Promise<Historial> {
-          console.log('HistorialService.create called with:', { reclamoId, accion, responsableId, metadata });
           return this.historialRepository.create({
                reclamoId: reclamoId as any,
                accion,
