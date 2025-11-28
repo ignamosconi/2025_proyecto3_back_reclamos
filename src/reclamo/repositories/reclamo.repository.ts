@@ -33,6 +33,9 @@ export class ReclamoRepository implements IReclamoRepository {
         path: 'encargados',
         populate: { path: 'fkEncargado', select: 'nombre email role' }
       });
+
+      // US 7.b: Poblar imagenes usando el virtual
+      query.populate('imagenes');
     }
     // NOTA: Se podría añadir un filtro { deletedAt: null } si se quiere ocultar el soft-deleted por defecto.
     const reclamo = await query.exec();

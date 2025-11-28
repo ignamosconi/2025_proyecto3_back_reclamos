@@ -64,6 +64,12 @@ ReclamoSchema.virtual('encargados', {
   foreignField: 'fkReclamo',
 });
 
+ReclamoSchema.virtual('imagenes', {
+  ref: 'Imagen',
+  localField: '_id',
+  foreignField: 'fkReclamo',
+});
+
 // Asegurar que los virtuales se incluyan al convertir a JSON/Object
 ReclamoSchema.set('toObject', { virtuals: true });
 ReclamoSchema.set('toJSON', { virtuals: true });
