@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { HistorialService } from './historial.service';
 import { AuthGuard } from '../auth/guards/auth.guard';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { AccionesHistorial } from './helpers/acciones-historial.enum';
 
 @ApiTags('Historial')
@@ -18,7 +18,9 @@ export class HistorialController {
      }
 
      @Post(':reclamoId/comentario')
-     @ApiOperation({ summary: 'Agregar un comentario al historial' })
+     @ApiOperation({ summary: 'Agregar un comentario al historial', description: 'Solo encargados y gerentes pueden agregar comentarios.' })
+     @ApiParam({ name: 'reclamoId', description: 'ID del reclamo', type: 'string' })
+     @ApiBody({ description: 'Comentario', type: String })
      async addComentario(
           @Param('reclamoId') reclamoId: string,
           @Body('comentario') comentario: string,
