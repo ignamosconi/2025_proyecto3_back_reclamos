@@ -9,6 +9,7 @@ import {
   Req,
   HttpStatus,
   HttpCode,
+  Get,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -37,7 +38,7 @@ export class ReclamoEncargadoController implements IReclamoEncargadoController {
   constructor(
     @Inject('IReclamoEncargadoService')
     private readonly service: ReclamoEncargadoService,
-  ) {}
+  ) { }
 
   @Post('auto-assign')
   @HttpCode(HttpStatus.OK)
@@ -72,5 +73,17 @@ export class ReclamoEncargadoController implements IReclamoEncargadoController {
   ): Promise<void> {
     const adminId = String((req.user as any)._id);
     await this.service.updateTeam(reclamoId, adminId, data);
+  }
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Obtener encargados asignados al reclamo' })
+  @ApiParam({ name: 'reclamoId', type: 'string' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Lista de encargados asignados.' })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
+  async getEncargados(
+    @Param('reclamoId', ParseObjectIdPipe) reclamoId: string,
+  ): Promise<any[]> {
+    return this.service.getEncargados(reclamoId);
   }
 }

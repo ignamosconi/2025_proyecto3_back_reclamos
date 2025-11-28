@@ -25,11 +25,16 @@ export interface IReclamoEncargadoRepository {
    * Verifica si un encargado específico ya está asignado a un reclamo.
    */
   isEncargadoAssigned(reclamoId: string, encargadoId: string): Promise<boolean>;
-  
+
   /**
    * Obtiene la lista de IDs de los encargados asignados (útil para validaciones o notificaciones).
    */
   findEncargadosIdsByReclamo(reclamoId: string): Promise<string[]>;
+
+  /**
+   * Obtiene la lista de encargados asignados con sus datos poblados.
+   */
+  findEncargadosByReclamo(reclamoId: string): Promise<ReclamoEncargado[]>;
 }
 
 export const IReclamoEncargadoRepository = Symbol('IReclamoEncargadoRepository');

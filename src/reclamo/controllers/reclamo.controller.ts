@@ -206,10 +206,12 @@ export class ReclamoController implements IReclamoController {
   async reassignArea(
     @Param('reclamoId', ParseObjectIdPipe) reclamoId: string,
     @Param('nuevaAreaId', ParseObjectIdPipe) nuevaAreaId: string,
+    @Req() req: RequestWithUser,
   ): Promise<ReclamoResponseDto> {
     console.log('Reassign Area');
+    const actorId = String((req.user as any)._id);
     // Nota: El servicio central maneja la lógica de reasignación (limpia encargados y actualiza área)
-    const updated = await this.reclamoService.reassignArea(reclamoId, nuevaAreaId);
+    const updated = await this.reclamoService.reassignAreaWithActor(reclamoId, nuevaAreaId, actorId);
     return updated.toObject() as ReclamoResponseDto;
   }
 

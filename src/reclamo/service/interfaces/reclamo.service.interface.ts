@@ -53,7 +53,7 @@ export interface IReclamoService {
   // ==================================================================
 
   reassignArea(reclamoId: string, nuevaAreaId: string): Promise<Reclamo>;
-
+  reassignAreaWithActor(reclamoId: string, nuevaAreaId: string, actorId: string): Promise<Reclamo>;
 
   /**
    * Cambia el estado de un reclamo (p. ej. a En Revisión, Resuelto, Rechazado).
