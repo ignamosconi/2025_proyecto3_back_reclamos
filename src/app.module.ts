@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 import { ReclamoModule } from './reclamo/reclamo.module';
 import { EncuestaModule } from './encuesta/encuesta.module';
 import { SintesisModule } from './sintesis/sintesis.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SintesisModule } from './sintesis/sintesis.module';
     ReclamoModule,
     EncuestaModule,
     SintesisModule,
+    DashboardModule,
 
   ],
   controllers: [AppController],
