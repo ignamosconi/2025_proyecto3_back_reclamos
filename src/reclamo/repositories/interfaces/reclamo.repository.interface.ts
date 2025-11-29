@@ -12,7 +12,7 @@ export interface IReclamoRepository {
   findById(id: string, populate?: boolean): Promise<Reclamo | null>;
   create(reclamoData: CreateReclamoDto, fkClienteId: string, fkAreaId: string): Promise<Reclamo>;
   update(id: string, updateData: UpdateReclamoDto): Promise<Reclamo | null>;
-  findAllPaginated(query: GetReclamoQueryDto, fkClienteId?: string): Promise<{ data: Reclamo[], total: number, page: number, limit: number }>;
+  findAllPaginated(query: GetReclamoQueryDto, fkClienteId?: string, areasIds?: string[]): Promise<{ data: Reclamo[], total: number, page: number, limit: number }>;
   updateArea(reclamoId: string, nuevaAreaId: string): Promise<Reclamo | null>;
   updateEstado(reclamoId: string, nuevoEstado: EstadoReclamo): Promise<Reclamo | null>;
   updateEstadoToEnRevision(reclamoId: string): Promise<Reclamo | null>;

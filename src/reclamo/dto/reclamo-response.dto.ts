@@ -5,6 +5,7 @@ import { Prioridad } from '../enums/prioridad.enum';
 import { Criticidad } from '../enums/criticidad.enum';
 import { EstadoReclamo } from '../enums/estado.enum';
 import { EncargadoResponseDto } from './encargado-response.dto';
+import { SintesisResponseDto } from 'src/sintesis/dto/sintesis-response.dto';
 
 export class ReclamoResponseDto {
     
@@ -46,4 +47,7 @@ export class ReclamoResponseDto {
 
     @ApiPropertyOptional({ type: [EncargadoResponseDto], description: 'Lista de encargados asignados al reclamo' })
     readonly encargados?: EncargadoResponseDto[];
+
+    @ApiPropertyOptional({ type: [SintesisResponseDto], description: 'Lista de síntesis del reclamo (changelogs para el cliente)' })
+    readonly sintesis?: SintesisResponseDto[];
 }

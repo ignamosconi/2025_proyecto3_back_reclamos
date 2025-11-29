@@ -66,3 +66,5 @@ export interface IReclamoService {
    */
   // updateImagen moved to ImagenService
 }
+
+export const IRECLAMO_SERVICE = 'IReclamoService';

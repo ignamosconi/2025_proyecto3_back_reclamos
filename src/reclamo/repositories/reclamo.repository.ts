@@ -108,7 +108,7 @@ export class ReclamoRepository implements IReclamoRepository {
 
   // --- Listado y Paginación (US 7) ---
 
-  async findAllPaginated(query: GetReclamoQueryDto, fkClienteId?: string): Promise<{ data: Reclamo[], total: number, page: number, limit: number }> {
+  async findAllPaginated(query: GetReclamoQueryDto, fkClienteId?: string, areasIds?: string[]): Promise<{ data: Reclamo[], total: number, page: number, limit: number }> {
     const { page, limit, estado, fkTipoReclamo, fechaInicio, fechaFin } = query;
     const skip = (page - 1) * limit;
 
@@ -117,6 +117,11 @@ export class ReclamoRepository implements IReclamoRepository {
 
     if (fkClienteId) {
       filter.fkCliente = fkClienteId;
+    }
+
+    // Filtrar por áreas si se proporcionan (para encargados - US 4)
+    if (areasIds && areasIds.length > 0) {
+      filter.fkArea = { $in: areasIds.map(id => new Types.ObjectId(id)) };
     }
 
     if (estado) filter.estado = estado;

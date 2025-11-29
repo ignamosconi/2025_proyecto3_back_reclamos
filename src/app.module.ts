@@ -11,6 +11,7 @@ import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './auth/auth.module';
 import { ReclamoModule } from './reclamo/reclamo.module';
 import { EncuestaModule } from './encuesta/encuesta.module';
+import { SintesisModule } from './sintesis/sintesis.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { EncuestaModule } from './encuesta/encuesta.module';
     AuthModule,
     ReclamoModule,
     EncuestaModule,
+    SintesisModule,
 
   ],
   controllers: [AppController],

@@ -8,6 +8,7 @@ import {
   ForbiddenException,
   ConflictException,
   Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
@@ -33,6 +34,9 @@ import { HistorialService } from 'src/historial/historial.service';
 import { AccionesHistorial } from 'src/historial/helpers/acciones-historial.enum';
 import type { IMailerService } from 'src/mailer/interfaces/mailer.service.interface';
 import { ConfigService } from '@nestjs/config';
+import type { ISintesisService } from 'src/sintesis/services/interfaces/sintesis.service.interface';
+import { ISINTESIS_SERVICE } from 'src/sintesis/services/interfaces/sintesis.service.interface';
+import { SintesisDocument } from 'src/sintesis/schemas/sintesis.schema';
 
 @Injectable()
 export class ReclamoService implements IReclamoService {
@@ -56,6 +60,8 @@ export class ReclamoService implements IReclamoService {
     @Inject('IMailerService')
     private readonly mailerService: IMailerService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => ISINTESIS_SERVICE))
+    private readonly sintesisService: ISintesisService,
   ) { }
 
   // ==================================================================
@@ -129,7 +135,24 @@ export class ReclamoService implements IReclamoService {
     // Si es Cliente, filtra por fkCliente. Si es Encargado/Gerente, devuelve todos
     const isClient = userRole === 'Cliente';
     const clientIdFilter: string | undefined = isClient ? userId : undefined;
-    const result = await this.reclamoRepository.findAllPaginated(query, clientIdFilter);
+    
+    // Para encargados, filtrar por sus áreas asignadas (US 4)
+    let areasIds: string[] | undefined = undefined;
+    const roleNormalized = String(userRole || '').toUpperCase();
+    if (roleNormalized === 'ENCARGADO') {
+      const encargado = await this.userModel.findById(userId).populate('areas').exec();
+      if (encargado && encargado.areas && Array.isArray(encargado.areas)) {
+        areasIds = encargado.areas.map((area: any) =>
+          area && area._id ? String(area._id) : String(area),
+        );
+        // Si el encargado no tiene áreas asignadas, no podrá ver ningún reclamo
+        if (areasIds.length === 0) {
+          areasIds = ['000000000000000000000000']; // ID inválido para que no retorne resultados
+        }
+      }
+    }
+
+    const result = await this.reclamoRepository.findAllPaginated(query, clientIdFilter, areasIds);
 
     // Determinar si el usuario es staff
     const isStaff = userRole === 'ENCARGADO' || userRole === 'GERENTE';
@@ -287,68 +310,138 @@ export class ReclamoService implements IReclamoService {
   }
 
   async changeState(reclamoId: string, data: import('../dto/change-state.dto').ChangeStateDto, actorId: string, actorRole: string): Promise<Reclamo> {
-    const { estado: nuevoEstado, sintesis } = data;
+    const { estado: nuevoEstado, sintesis, nombre } = data;
 
     const reclamo = await this.reclamoRepository.findById(reclamoId, false);
     if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
 
-    // No permitir cambios si está en estado final
+    // 1. No permitir cambios si está en estado final
     if (reclamo.estado === EstadoReclamo.RESUELTO || reclamo.estado === EstadoReclamo.RECHAZADO) {
       throw new BadRequestException('No es posible cambiar el estado de un reclamo en estado final.');
     }
 
-    // Validaciones de permiso: Gerente puede siempre; Encargado debe estar asignado al reclamo
+    // 2. Validar transiciones de estado válidas (US 10)
+    const transicionesValidas: Record<string, string[]> = {
+      [EstadoReclamo.PENDIENTE]: [EstadoReclamo.EN_REVISION],
+      [EstadoReclamo.EN_REVISION]: [EstadoReclamo.RESUELTO, EstadoReclamo.RECHAZADO],
+    };
+
+    const estadosPermitidos = transicionesValidas[reclamo.estado] || [];
+    if (!estadosPermitidos.includes(nuevoEstado)) {
+      throw new BadRequestException(
+        `Transición de estado inválida. No se puede cambiar de "${reclamo.estado}" a "${nuevoEstado}". ` +
+        `Transiciones válidas: ${estadosPermitidos.join(', ')}`,
+      );
+    }
+
+    // 3. Validaciones de permiso por área (US 4 y US 10)
     const roleNormalized = String(actorRole || '').toUpperCase();
     if (roleNormalized !== 'GERENTE') {
       if (roleNormalized === 'ENCARGADO') {
+        // Verificar que el encargado está asignado al reclamo
         const assigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, actorId);
-        if (!assigned) throw new ForbiddenException('No estás asignado a este reclamo.');
+        if (!assigned) {
+          throw new ForbiddenException('No estás asignado a este reclamo.');
+        }
+
+        // Verificar que el encargado pertenece al área del reclamo
+        const encargado = await this.userModel.findById(actorId).populate('areas').exec();
+        if (!encargado) {
+          throw new NotFoundException('Encargado no encontrado.');
+        }
+
+        const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
+          ? String((reclamo.fkArea as any)._id)
+          : String(reclamo.fkArea);
+
+        const encargadoAreas = (encargado.areas || []).map((area: any) =>
+          area && area._id ? String(area._id) : String(area),
+        );
+
+        if (!encargadoAreas.includes(reclamoAreaId)) {
+          throw new ForbiddenException(
+            'No tienes permiso para gestionar reclamos de esta área. Solo puedes gestionar reclamos de tus áreas asignadas.',
+          );
+        }
       } else {
         throw new ForbiddenException('Rol no autorizado para cambiar el estado.');
       }
     }
 
-    // Requerir síntesis cuando se pasa a estados finales
+    // 4. Requerir síntesis cuando se pasa a estados finales
     if ((nuevoEstado === EstadoReclamo.RESUELTO || nuevoEstado === EstadoReclamo.RECHAZADO) && !sintesis) {
-      throw new BadRequestException('Se requiere síntesis/motivo al marcar el reclamo como Resuelto, Rechazado.');
+      throw new BadRequestException('Se requiere síntesis/motivo al marcar el reclamo como Resuelto o Rechazado.');
     }
 
-    // Actualizar estado
+    // 5. Validar longitud de síntesis
+    if (sintesis && sintesis.length > 1000) {
+      throw new BadRequestException('La síntesis no puede exceder 1000 caracteres.');
+    }
+
+    // 6. Actualizar estado
     const updated = await this.reclamoRepository.updateEstado(reclamoId, nuevoEstado);
     if (!updated) throw new NotFoundException('Fallo al actualizar el estado del reclamo');
 
-    // Emitir evento para Historial con { prevEstado, nuevoEstado, actorId, actorRole, sintesis }
+    // 7. Crear síntesis si se proporciona
+    let sintesisCreada: SintesisDocument | null = null;
+    if (sintesis) {
+      try {
+        const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
+          ? String((reclamo.fkArea as any)._id)
+          : String(reclamo.fkArea);
+
+        sintesisCreada = await this.sintesisService.create(
+          {
+            nombre: nombre,
+            descripcion: sintesis,
+          },
+          reclamoId,
+          actorId,
+          reclamoAreaId,
+        );
+
+        this.logger.log(`Síntesis creada para reclamo ${reclamoId} por usuario ${actorId}`);
+      } catch (error) {
+        this.logger.error(`Error creating síntesis for reclamo ${reclamoId}: ${error.message}`, error.stack);
+        // No fallar la operación si falla la síntesis, pero loguear el error
+      }
+    }
+
+    // 8. Emitir evento para Historial
     try {
       await this.historialService.create(
         reclamoId,
         AccionesHistorial.CAMBIO_ESTADO,
-        `Estado cambiado de ${reclamo.estado} a ${nuevoEstado}. ${sintesis ? 'Motivo: ' + sintesis : ''}`,
+        `Estado cambiado de ${reclamo.estado} a ${nuevoEstado}. ${sintesis ? 'Síntesis: ' + sintesis.substring(0, 100) + '...' : ''}`,
         actorId,
         {
           estado_anterior: reclamo.estado,
           estado_actual: nuevoEstado,
-        }
+          sintesis_id: sintesisCreada ? String(sintesisCreada._id) : undefined,
+        },
       );
     } catch (error) {
       this.logger.error(`Error creating history for reclamo ${reclamoId}: ${error.message}`, error.stack);
     }
 
-    // Enviar email de notificación si el estado cambió a RESUELTO o RECHAZADO
-    if (nuevoEstado === EstadoReclamo.RESUELTO || nuevoEstado === EstadoReclamo.RECHAZADO) {
-      try {
-        // Obtener el reclamo con el cliente poblado para obtener el email
-        const reclamoConCliente = await this.reclamoRepository.findById(reclamoId, true);
-        if (reclamoConCliente && reclamoConCliente.fkCliente) {
-          const clienteEmail = (reclamoConCliente.fkCliente as any).email;
-          const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-          const encuestaLink = `${frontendUrl}/reclamos/${reclamoId}/encuesta`;
+    // 9. Enviar email de notificación al cliente cuando se crea una síntesis o se cierra el reclamo
+    const reclamoConCliente = await this.reclamoRepository.findById(reclamoId, true);
+    if (reclamoConCliente && reclamoConCliente.fkCliente) {
+      const clienteEmail = (reclamoConCliente.fkCliente as any).email;
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+      const reclamoLink = `${frontendUrl}/reclamos/${reclamoId}`;
 
+      try {
+        if (nuevoEstado === EstadoReclamo.RESUELTO || nuevoEstado === EstadoReclamo.RECHAZADO) {
+          // Email de cierre de reclamo
           const estadoTexto = nuevoEstado === EstadoReclamo.RESUELTO ? 'Resuelto' : 'Rechazado';
+          const encuestaLink = `${frontendUrl}/reclamos/${reclamoId}/encuesta`;
           const emailSubject = 'Tu reclamo ha sido cerrado - Encuesta de satisfacción';
           const emailBody = `
             <h2>Tu reclamo ha sido cerrado</h2>
             <p>Estimado/a cliente,</p>
             <p>Te informamos que tu reclamo "<strong>${reclamoConCliente.titulo}</strong>" ha sido marcado como <strong>${estadoTexto}</strong>.</p>
+            ${sintesisCreada ? `<p><strong>Síntesis:</strong></p><p>${sintesis}</p>` : ''}
             <p>Tu opinión es muy importante para nosotros. Por favor, tómate un momento para completar nuestra encuesta de satisfacción:</p>
             <p><a href="${encuestaLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Completar Encuesta</a></p>
             <p>O copia y pega este enlace en tu navegador:</p>
@@ -356,14 +449,29 @@ export class ReclamoService implements IReclamoService {
             <p>Gracias por tu tiempo.</p>
             <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>
           `;
-
           this.mailerService.sendMail(clienteEmail, emailSubject, emailBody);
           this.logger.log(`Email de encuesta enviado a ${clienteEmail} para reclamo ${reclamoId}`);
+        } else if (sintesisCreada) {
+          // Email de notificación de síntesis (avance)
+          const emailSubject = `Actualización en tu reclamo: ${reclamoConCliente.titulo}`;
+          const emailBody = `
+            <h2>Actualización en tu reclamo</h2>
+            <p>Estimado/a cliente,</p>
+            <p>Te informamos que ha habido una actualización en tu reclamo "<strong>${reclamoConCliente.titulo}</strong>".</p>
+            <p><strong>Nuevo estado:</strong> ${nuevoEstado}</p>
+            ${nombre ? `<p><strong>Título de la síntesis:</strong> ${nombre}</p>` : ''}
+            <p><strong>Síntesis:</strong></p>
+            <p>${sintesis}</p>
+            <p><a href="${reclamoLink}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Ver Reclamo</a></p>
+            <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>
+          `;
+          this.mailerService.sendMail(clienteEmail, emailSubject, emailBody);
+          this.logger.log(`Email de síntesis enviado a ${clienteEmail} para reclamo ${reclamoId}`);
         }
       } catch (error) {
         // Log error but don't fail the state change operation
         this.logger.error(
-          `Error al enviar email de encuesta para reclamo ${reclamoId}: ${error.message}`,
+          `Error al enviar email de notificación para reclamo ${reclamoId}: ${error.message}`,
           error.stack,
         );
       }

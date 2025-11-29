@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
 import { ReclamoController } from './controllers/reclamo.controller';
@@ -15,6 +15,7 @@ import { IImagenService } from './service/interfaces/imagen.service.interface';
 import { Reclamo, ReclamoSchema } from './schemas/reclamo.schema';
 import { ReclamoEncargado, ReclamoEncargadoSchema } from './schemas/reclamo-encargado.schema';
 import { Imagen, ImagenSchema } from './schemas/imagen.schema';
+import { SintesisModule } from 'src/sintesis/sintesis.module';
 
 // Módulos relacionados (aseguran que los modelos referenciados estén registrados)
 import { UsersModule } from 'src/users/users.module';
@@ -41,6 +42,7 @@ import { MailerModule } from 'src/mailer/mailer.module';
 		AuthModule,
 		HistorialModule,
 		MailerModule,
+		forwardRef(() => SintesisModule),
 	],
 	controllers: [ReclamoController, ReclamoEncargadoController],
 	providers: [

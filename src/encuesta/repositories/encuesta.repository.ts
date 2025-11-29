@@ -6,6 +6,7 @@ import { IEncuestaRepository } from './interfaces/encuesta.repository.interface'
 import { CreateEncuestaDto } from '../dto/create-encuesta.dto';
 import { GetEncuestaQueryDto } from '../dto/get-encuesta-query.dto';
 import { PaginationResponseEncuestaDto } from '../dto/pag-response-encuesta.dto';
+import { EncuestaResponseDto } from '../dto/encuesta-response.dto';
 
 @Injectable()
 export class EncuestaRepository implements IEncuestaRepository {
@@ -59,7 +60,23 @@ export class EncuestaRepository implements IEncuestaRepository {
       .populate('fkClienteCreador')
       .exec();
 
-    return { data, total, page, limit };
+    return {
+      data: data.map((encuesta) => {
+        const doc = encuesta.toObject() as any;
+        return {
+          _id: String(doc._id),
+          calificacion: doc.calificacion,
+          descripcion: doc.descripcion,
+          fkReclamo: doc.fkReclamo?.toString() || String(doc.fkReclamo),
+          fkClienteCreador: doc.fkClienteCreador?.toString() || String(doc.fkClienteCreador),
+          createdAt: doc.createdAt,
+          updatedAt: doc.updatedAt,
+        } as EncuestaResponseDto;
+      }),
+      total,
+      page,
+      limit,
+    };
   }
 
   async findById(id: string): Promise<EncuestaDocument | null> {
