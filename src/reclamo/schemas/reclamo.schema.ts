@@ -70,6 +70,13 @@ ReclamoSchema.virtual('imagenes', {
   foreignField: 'fkReclamo',
 });
 
+ReclamoSchema.virtual('encuesta', {
+  ref: 'Encuesta',
+  localField: '_id',
+  foreignField: 'fkReclamo',
+  justOne: true,
+});
+
 // Asegurar que los virtuales se incluyan al convertir a JSON/Object
 ReclamoSchema.set('toObject', { virtuals: true });
 ReclamoSchema.set('toJSON', { virtuals: true });

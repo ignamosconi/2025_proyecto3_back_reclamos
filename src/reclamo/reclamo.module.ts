@@ -23,6 +23,7 @@ import { TipoReclamoModule } from 'src/tipoReclamo/tipo-reclamo.module';
 import { AreasResponsablesModule } from 'src/areasResponsables/areas-responsables.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { HistorialModule } from 'src/historial/historial.module';
+import { MailerModule } from 'src/mailer/mailer.module';
 
 @Module({
 	imports: [
@@ -38,7 +39,8 @@ import { HistorialModule } from 'src/historial/historial.module';
 		TipoReclamoModule,
 		AreasResponsablesModule,
 		AuthModule,
-		HistorialModule
+		HistorialModule,
+		MailerModule,
 	],
 	controllers: [ReclamoController, ReclamoEncargadoController],
 	providers: [

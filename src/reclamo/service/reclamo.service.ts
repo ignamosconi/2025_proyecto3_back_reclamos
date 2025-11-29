@@ -31,6 +31,8 @@ import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
 import { ReclamoResponseDto } from '../dto/reclamo-response.dto';
 import { HistorialService } from 'src/historial/historial.service';
 import { AccionesHistorial } from 'src/historial/helpers/acciones-historial.enum';
+import type { IMailerService } from 'src/mailer/interfaces/mailer.service.interface';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ReclamoService implements IReclamoService {
@@ -51,6 +53,9 @@ export class ReclamoService implements IReclamoService {
     @Inject(IImagenRepository)
     private readonly imagenRepository: IImagenRepository,
     private readonly historialService: HistorialService,
+    @Inject('IMailerService')
+    private readonly mailerService: IMailerService,
+    private readonly configService: ConfigService,
   ) { }
 
   // ==================================================================
@@ -326,6 +331,42 @@ export class ReclamoService implements IReclamoService {
       );
     } catch (error) {
       this.logger.error(`Error creating history for reclamo ${reclamoId}: ${error.message}`, error.stack);
+    }
+
+    // Enviar email de notificación si el estado cambió a RESUELTO o RECHAZADO
+    if (nuevoEstado === EstadoReclamo.RESUELTO || nuevoEstado === EstadoReclamo.RECHAZADO) {
+      try {
+        // Obtener el reclamo con el cliente poblado para obtener el email
+        const reclamoConCliente = await this.reclamoRepository.findById(reclamoId, true);
+        if (reclamoConCliente && reclamoConCliente.fkCliente) {
+          const clienteEmail = (reclamoConCliente.fkCliente as any).email;
+          const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+          const encuestaLink = `${frontendUrl}/reclamos/${reclamoId}/encuesta`;
+
+          const estadoTexto = nuevoEstado === EstadoReclamo.RESUELTO ? 'Resuelto' : 'Rechazado';
+          const emailSubject = 'Tu reclamo ha sido cerrado - Encuesta de satisfacción';
+          const emailBody = `
+            <h2>Tu reclamo ha sido cerrado</h2>
+            <p>Estimado/a cliente,</p>
+            <p>Te informamos que tu reclamo "<strong>${reclamoConCliente.titulo}</strong>" ha sido marcado como <strong>${estadoTexto}</strong>.</p>
+            <p>Tu opinión es muy importante para nosotros. Por favor, tómate un momento para completar nuestra encuesta de satisfacción:</p>
+            <p><a href="${encuestaLink}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Completar Encuesta</a></p>
+            <p>O copia y pega este enlace en tu navegador:</p>
+            <p>${encuestaLink}</p>
+            <p>Gracias por tu tiempo.</p>
+            <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>
+          `;
+
+          this.mailerService.sendMail(clienteEmail, emailSubject, emailBody);
+          this.logger.log(`Email de encuesta enviado a ${clienteEmail} para reclamo ${reclamoId}`);
+        }
+      } catch (error) {
+        // Log error but don't fail the state change operation
+        this.logger.error(
+          `Error al enviar email de encuesta para reclamo ${reclamoId}: ${error.message}`,
+          error.stack,
+        );
+      }
     }
 
     return updated;

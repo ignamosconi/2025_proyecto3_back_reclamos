@@ -16,7 +16,9 @@ import { IUSERS_REPOSITORY } from '../users/interfaces/users.repository.interfac
 import { ProyectosSeeder } from './proyecto.seeder';
 import { ReclamosSeeder } from './reclamos.seeder';
 import { HistorialReclamosSeeder } from './historial-reclamos.seeder';
+import { EncuestaSeeder } from './encuesta.seeder';
 import { HistorialRepository } from '../historial/historial.repository';
+import { IENCUESTA_REPOSITORY } from '../encuesta/repositories/interfaces/encuesta.repository.interface';
 
 async function runSeeders() {
   console.log('Iniciando seeders con repositories...');
@@ -39,9 +41,11 @@ async function runSeeders() {
   // Nuevos seeders
   const reclamoRepo = app.get('IReclamoRepository');
   const historialRepo = app.get(HistorialRepository);
+  const encuestaRepo = app.get(IENCUESTA_REPOSITORY);
 
   await new ReclamosSeeder(reclamoRepo, proyectosRepo, usersRepo, tipoRepo).run();
   await new HistorialReclamosSeeder(historialRepo, reclamoRepo).run();
+  await new EncuestaSeeder(encuestaRepo, reclamoRepo, usersRepo).run();
   console.log('###########################################');
   console.log('Seeders finalizados.');
 

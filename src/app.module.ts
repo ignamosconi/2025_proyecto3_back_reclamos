@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { MailerModule } from './mailer/mailer.module';
 import { AuthModule } from './auth/auth.module';
 import { ReclamoModule } from './reclamo/reclamo.module';
+import { EncuestaModule } from './encuesta/encuesta.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ReclamoModule } from './reclamo/reclamo.module';
     MailerModule,
     AuthModule,
     ReclamoModule,
+    EncuestaModule,
 
   ],
   controllers: [AppController],
