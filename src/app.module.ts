@@ -13,6 +13,7 @@ import { ReclamoModule } from './reclamo/reclamo.module';
 import { EncuestaModule } from './encuesta/encuesta.module';
 import { SintesisModule } from './sintesis/sintesis.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ComentarioModule } from './comentario/comentario.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     EncuestaModule,
     SintesisModule,
     DashboardModule,
+    ComentarioModule,
 
   ],
   controllers: [AppController],

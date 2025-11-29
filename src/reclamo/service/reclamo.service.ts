@@ -21,6 +21,7 @@ import { GetReclamoQueryDto } from '../dto/get-reclamo-query.dto';
 
 import { EstadoReclamo } from '../enums/estado.enum';
 import { User, UserDocument } from '../../users/schemas/user.schema';
+import { UserRole } from '../../users/helpers/enum.roles';
 import { IReclamoService } from './interfaces/reclamo.service.interface';
 import { IReclamoRepository } from '../repositories/interfaces/reclamo.repository.interface';
 import { IReclamoEncargadoRepository } from '../repositories/interfaces/reclamo-encargado.repository.interface';
@@ -127,6 +128,22 @@ export class ReclamoService implements IReclamoService {
       userId,
       { estado_anterior: null, estado_nuevo: createdReclamo.estado },
     );
+
+    // 6. Notificar a encargados de la área (US 15)
+    try {
+      await this.notifyEncargadosArea(
+        areaId,
+        String(createdReclamo._id),
+        createdReclamo.titulo,
+        'Nuevo reclamo creado',
+        `Se ha creado un nuevo reclamo "${createdReclamo.titulo}" en tu área.`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error al enviar notificaciones a encargados al crear reclamo ${createdReclamo._id}: ${error.message}`,
+        error.stack,
+      );
+    }
 
     return createdReclamo;
   }
@@ -306,6 +323,25 @@ export class ReclamoService implements IReclamoService {
       );
     }
 
+    // Notificar a encargados de la nueva área (US 15)
+    try {
+      const reclamoConTitulo = await this.reclamoRepository.findById(reclamoId, false);
+      if (reclamoConTitulo) {
+        await this.notifyEncargadosArea(
+          nuevaAreaId,
+          reclamoId,
+          reclamoConTitulo.titulo,
+          'Reclamo reasignado a tu área',
+          `El reclamo "${reclamoConTitulo.titulo}" ha sido reasignado a tu área.`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error al enviar notificaciones a encargados al reasignar área del reclamo ${reclamoId}: ${error.message}`,
+        error.stack,
+      );
+    }
+
     return updated;
   }
 
@@ -477,6 +513,22 @@ export class ReclamoService implements IReclamoService {
       }
     }
 
+    // 10. Notificar a encargados asignados cuando el estado cambia a RESUELTO o RECHAZADO (US 15)
+    if (nuevoEstado === EstadoReclamo.RESUELTO || nuevoEstado === EstadoReclamo.RECHAZADO) {
+      try {
+        await this.notifyEncargadosAsignados(
+          reclamoId,
+          reclamo.titulo,
+          nuevoEstado,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Error al enviar notificaciones a encargados asignados para reclamo ${reclamoId}: ${error.message}`,
+          error.stack,
+        );
+      }
+    }
+
     return updated;
   }
 
@@ -536,5 +588,107 @@ export class ReclamoService implements IReclamoService {
     }
 
     return reclamo;
+  }
+
+  /**
+   * Notifica a todos los encargados de un área específica (US 15).
+   * Se usa cuando se crea un reclamo o se reasigna a una nueva área.
+   */
+  private async notifyEncargadosArea(
+    areaId: string,
+    reclamoId: string,
+    reclamoTitulo: string,
+    emailSubject: string,
+    emailMessage: string,
+  ): Promise<void> {
+    try {
+      // Obtener todos los encargados que tienen asignada esta área
+      const encargados = await this.userModel
+        .find({
+          role: UserRole.ENCARGADO,
+          areas: new Types.ObjectId(areaId),
+          deletedAt: null,
+        })
+        .select('email firstName lastName')
+        .exec();
+
+      if (encargados.length === 0) {
+        this.logger.log(`No hay encargados asignados al área ${areaId} para notificar`);
+        return;
+      }
+
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+      const reclamoLink = `${frontendUrl}/reclamos/${reclamoId}`;
+
+      // Enviar email a cada encargado
+      for (const encargado of encargados) {
+        const emailBody = `
+          <h2>${emailSubject}</h2>
+          <p>Estimado/a ${encargado.firstName} ${encargado.lastName},</p>
+          <p>${emailMessage}</p>
+          <p><strong>Reclamo:</strong> ${reclamoTitulo}</p>
+          <p><a href="${reclamoLink}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Ver Reclamo</a></p>
+          <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>
+        `;
+
+        this.mailerService.sendMail(encargado.email, emailSubject, emailBody);
+        this.logger.log(`Notificación enviada a encargado ${encargado.email} para reclamo ${reclamoId}`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error al notificar encargados del área ${areaId} para reclamo ${reclamoId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Notifica a los encargados asignados a un reclamo cuando el estado cambia a RESUELTO o RECHAZADO (US 15).
+   */
+  private async notifyEncargadosAsignados(
+    reclamoId: string,
+    reclamoTitulo: string,
+    nuevoEstado: EstadoReclamo,
+  ): Promise<void> {
+    try {
+      // Obtener encargados asignados al reclamo
+      const encargadosAsignados = await this.reclamoEncargadoRepository.findEncargadosByReclamo(reclamoId);
+
+      if (encargadosAsignados.length === 0) {
+        this.logger.log(`No hay encargados asignados al reclamo ${reclamoId} para notificar`);
+        return;
+      }
+
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:3000';
+      const reclamoLink = `${frontendUrl}/reclamos/${reclamoId}`;
+      const estadoTexto = nuevoEstado === EstadoReclamo.RESUELTO ? 'Resuelto' : 'Rechazado';
+
+      // Enviar email a cada encargado asignado
+      for (const asignacion of encargadosAsignados) {
+        const encargado = asignacion.fkEncargado as any;
+        if (!encargado || !encargado.email) {
+          continue;
+        }
+
+        const emailSubject = `Reclamo ${estadoTexto}: ${reclamoTitulo}`;
+        const emailBody = `
+          <h2>Reclamo ${estadoTexto}</h2>
+          <p>Estimado/a ${encargado.firstName || ''} ${encargado.lastName || ''},</p>
+          <p>Te informamos que el reclamo "<strong>${reclamoTitulo}</strong>" ha sido marcado como <strong>${estadoTexto}</strong>.</p>
+          <p><a href="${reclamoLink}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Ver Reclamo</a></p>
+          <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>
+        `;
+
+        this.mailerService.sendMail(encargado.email, emailSubject, emailBody);
+        this.logger.log(`Notificación enviada a encargado ${encargado.email} para reclamo ${reclamoId} (${estadoTexto})`);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error al notificar encargados asignados para reclamo ${reclamoId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 }

@@ -18,9 +18,11 @@ import { ReclamosSeeder } from './reclamos.seeder';
 import { HistorialReclamosSeeder } from './historial-reclamos.seeder';
 import { EncuestaSeeder } from './encuesta.seeder';
 import { SintesisSeeder } from './sintesis.seeder';
+import { ComentarioSeeder } from './comentario.seeder';
 import { HistorialRepository } from '../historial/historial.repository';
 import { IENCUESTA_REPOSITORY } from '../encuesta/repositories/interfaces/encuesta.repository.interface';
 import { ISINTESIS_REPOSITORY } from '../sintesis/repositories/interfaces/sintesis.repository.interface';
+import { ICOMENTARIO_REPOSITORY } from '../comentario/repositories/interfaces/comentario.repository.interface';
 
 async function runSeeders() {
   console.log('Iniciando seeders con repositories...');
@@ -45,11 +47,13 @@ async function runSeeders() {
   const historialRepo = app.get(HistorialRepository);
   const encuestaRepo = app.get(IENCUESTA_REPOSITORY);
   const sintesisRepo = app.get(ISINTESIS_REPOSITORY);
+  const comentarioRepo = app.get(ICOMENTARIO_REPOSITORY);
 
   await new ReclamosSeeder(reclamoRepo, proyectosRepo, usersRepo, tipoRepo).run();
   await new HistorialReclamosSeeder(historialRepo, reclamoRepo).run();
   await new EncuestaSeeder(encuestaRepo, reclamoRepo, usersRepo).run();
   await new SintesisSeeder(sintesisRepo, reclamoRepo, usersRepo).run();
+  await new ComentarioSeeder(comentarioRepo, reclamoRepo, usersRepo).run();
   console.log('###########################################');
   console.log('Seeders finalizados.');
 
