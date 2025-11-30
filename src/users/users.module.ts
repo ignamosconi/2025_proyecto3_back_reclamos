@@ -8,6 +8,7 @@ import { IUSERS_REPOSITORY } from './interfaces/users.repository.interface';
 import { User, UserSchema } from './schemas/user.schema';
 import { Area, AreaSchema } from 'src/areasResponsables/schemas/area.schema';
 import { MailerModule } from 'src/mailer/mailer.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { MailerModule } from 'src/mailer/mailer.module';
       { name: Area.name, schema: AreaSchema },
     ]),
     MailerModule,
+    AuthModule,
   ],
   controllers: [UsersController],
   providers: [

@@ -1,5 +1,9 @@
-import { Controller, Post, Body, Patch, Get, Param, Inject, Query, Delete } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody } from '@nestjs/swagger';
+import { Controller, Post, Body, Patch, Get, Param, Inject, Query, Delete, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from './helpers/enum.roles';
 import { IUsersController } from './interfaces/users.controller.interface';
 import { CreateClientDto } from './dto/create-client.dto';
 import { CreateStaffDto } from './dto/create-staff.dto';
@@ -31,6 +35,9 @@ export class UsersController implements IUsersController {
     return this.service.registerClient(dto);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.GERENTE)
   @Post('register-staff')
   @ApiOperation({ summary: 'Registrar un staff' })
   @ApiBody({ type: CreateStaffDto })
@@ -41,6 +48,9 @@ export class UsersController implements IUsersController {
     return this.service.createStaff(dto);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE, UserRole.ENCARGADO, UserRole.GERENTE)
   @Patch('profile/:userId')
   @ApiOperation({ summary: 'Actualizar perfil de un cliente' })
   @ApiParam({ name: 'userId', type: String })
@@ -55,6 +65,9 @@ export class UsersController implements IUsersController {
     return this.service.updateProfile(userId, dto);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
   @Patch('staff/:userId')
   @ApiOperation({ summary: 'Actualizar un staff' })
   @ApiParam({ name: 'userId', type: String })
@@ -69,8 +82,11 @@ export class UsersController implements IUsersController {
     return this.service.updateStaff(userId, dto);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.GERENTE)
   @Get()
-  @ApiOperation({ summary: 'Listar usuarios paginados' })
+  @ApiOperation({ summary: 'Listar usuarios paginados (Solo Gerente)' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiQuery({ name: 'sort', required: false, enum: ['asc', 'desc'] })
@@ -84,6 +100,9 @@ export class UsersController implements IUsersController {
     return this.service.findAll(query);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.GERENTE)
   @Get('deleted')
   @ApiOperation({ summary: 'Listar usuarios eliminados' })
   @ApiQuery({ name: 'page', required: false, type: Number })
@@ -96,6 +115,9 @@ export class UsersController implements IUsersController {
     return this.service.findDeleted(query);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
   @Get('email/:email')
   @ApiOperation({ summary: 'Buscar usuario por email' })
   @ApiParam({ name: 'email', type: String })
@@ -106,6 +128,9 @@ export class UsersController implements IUsersController {
     return this.service.findByEmail(email);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
   @Get('id/:userId')
   @ApiOperation({ summary: 'Buscar usuario por ID' })
   @ApiParam({ name: 'userId', type: String })
@@ -116,6 +141,9 @@ export class UsersController implements IUsersController {
     return this.service.findById(userId);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.GERENTE)
   @Delete(':userId')
   @ApiOperation({ summary: 'Eliminar un usuario (soft delete)' })
   @ApiParam({ name: 'userId', type: String })
@@ -128,6 +156,9 @@ export class UsersController implements IUsersController {
     return this.service.softDelete(userId);
   }
 
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.GERENTE)
   @Patch(':userId/restore')
   @ApiOperation({ summary: 'Restaurar un usuario eliminado' })
   @ApiParam({ name: 'userId', type: String })

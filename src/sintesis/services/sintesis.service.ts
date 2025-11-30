@@ -76,48 +76,8 @@ export class SintesisService implements ISintesisService {
     userRole: string,
     userId: string,
   ): Promise<SintesisDocument[]> {
-    const reclamo = await this.reclamoService.findById(reclamoId, userRole);
-    if (!reclamo) {
-      throw new NotFoundException(`Reclamo con ID ${reclamoId} no encontrado.`);
-    }
-
-    // Validar permisos de visibilidad
-    if (userRole === UserRole.CLIENTE) {
-      const reclamoClienteId =
-        reclamo.fkCliente && (reclamo.fkCliente as any)._id
-          ? String((reclamo.fkCliente as any)._id)
-          : String(reclamo.fkCliente);
-
-      if (reclamoClienteId !== String(userId)) {
-        this.logger.warn(
-          `Cliente ${userId} intentó acceder a síntesis del reclamo ${reclamoId} que pertenece a ${reclamoClienteId}`,
-        );
-        throw new ForbiddenException(
-          'No tienes permiso para ver las síntesis de este reclamo.',
-        );
-      }
-    } else if (userRole === UserRole.ENCARGADO) {
-      // Validar que el encargado pertenece al área del reclamo
-      const encargado = await this.userModel.findById(userId).populate('areas').exec();
-      if (!encargado) {
-        throw new NotFoundException('Encargado no encontrado.');
-      }
-
-      const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
-        ? String((reclamo.fkArea as any)._id)
-        : String(reclamo.fkArea);
-
-      const encargadoAreas = (encargado.areas || []).map((area: any) =>
-        area && area._id ? String(area._id) : String(area),
-      );
-
-      if (!encargadoAreas.includes(reclamoAreaId)) {
-        throw new ForbiddenException(
-          'No tienes permiso para ver síntesis de reclamos de esta área.',
-        );
-      }
-    }
-    // Gerente puede ver todas las síntesis
+    // Validación de acceso se hace en el servicio de reclamo
+    const reclamo = await this.reclamoService.findById(reclamoId, userId, userRole);
 
     return this.repository.findByReclamoId(reclamoId);
   }
@@ -142,46 +102,8 @@ export class SintesisService implements ISintesisService {
       throw new NotFoundException('Síntesis no encontrada para el reclamo especificado.');
     }
 
-    const reclamo = await this.reclamoService.findById(reclamoId, userRole);
-    if (!reclamo) {
-      throw new NotFoundException('Reclamo no encontrado.');
-    }
-
-    if (userRole === UserRole.CLIENTE) {
-      const reclamoClienteId =
-        reclamo.fkCliente && (reclamo.fkCliente as any)._id
-          ? String((reclamo.fkCliente as any)._id)
-          : String(reclamo.fkCliente);
-
-      if (reclamoClienteId !== String(userId)) {
-        this.logger.warn(
-          `Cliente ${userId} intentó acceder a síntesis ${id} del reclamo que pertenece a ${reclamoClienteId}`,
-        );
-        throw new ForbiddenException(
-          'No tienes permiso para ver esta síntesis.',
-        );
-      }
-    } else if (userRole === UserRole.ENCARGADO) {
-      const encargado = await this.userModel.findById(userId).populate('areas').exec();
-      if (!encargado) {
-        throw new NotFoundException('Encargado no encontrado.');
-      }
-
-      const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
-        ? String((reclamo.fkArea as any)._id)
-        : String(reclamo.fkArea);
-
-      const encargadoAreas = (encargado.areas || []).map((area: any) =>
-        area && area._id ? String(area._id) : String(area),
-      );
-
-      if (!encargadoAreas.includes(reclamoAreaId)) {
-        throw new ForbiddenException(
-          'No tienes permiso para ver síntesis de reclamos de esta área.',
-        );
-      }
-    }
-    // Gerente puede ver todas las síntesis
+    // Validación de acceso se hace en el servicio de reclamo
+    const reclamo = await this.reclamoService.findById(reclamoId, userId, userRole);
 
     return sintesis;
   }

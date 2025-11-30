@@ -6,8 +6,8 @@ import { PaginationResponseProyectoDto } from '../dto/pag-proyecto.dto';
 
 export interface IProyectosService {
   create(data: CreateProyectoDto): Promise<ProyectoDocument>;
-  findAll(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto>;
-  findById(id: string): Promise<ProyectoDocument>;
+  findAll(query: GetProyectosQueryDto, userId?: string, userRole?: string): Promise<PaginationResponseProyectoDto>;
+  findById(id: string, userId?: string, userRole?: string): Promise<ProyectoDocument>;
   update(id: string, data: UpdateProyectoDto): Promise<ProyectoDocument>;
   delete(id: string): Promise<void>;
   findDeleted(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto>;

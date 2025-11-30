@@ -130,15 +130,18 @@ export class ReclamoController implements IReclamoController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Obtiene un reclamo específico por ID' })
+  @ApiOperation({ summary: 'Obtiene un reclamo específico por ID. CLIENTE: solo sus reclamos. ENCARGADO: reclamos de sus áreas. GERENTE: todos.' })
   @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
   @ApiResponse({ status: HttpStatus.OK, type: ReclamoResponseDto })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.CLIENTE, UserRole.ENCARGADO, UserRole.GERENTE)
   async getReclamoById(
     @Param('id', ParseObjectIdPipe) id: string,
-    @Req() req?: RequestWithUser,
+    @Req() req: RequestWithUser,
   ): Promise<ReclamoResponseDto> {
-    const userRole = req?.user ? (req.user as any).role : undefined;
-    const reclamo = await this.reclamoService.findById(id, userRole);
+    const userId = String((req.user as any)._id);
+    const userRole = (req.user as any).role || (req.user as any).rol;
+    const reclamo = await this.reclamoService.findById(id, userId, userRole);
     return reclamo.toObject() as ReclamoResponseDto;
   }
 

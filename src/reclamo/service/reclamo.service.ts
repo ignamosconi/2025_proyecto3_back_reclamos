@@ -27,6 +27,7 @@ import { IReclamoRepository } from '../repositories/interfaces/reclamo.repositor
 import { IReclamoEncargadoRepository } from '../repositories/interfaces/reclamo-encargado.repository.interface';
 import { IImagenRepository } from '../repositories/interfaces/imagen.repository.interface';
 import type { IProyectosService } from 'src/proyectos/services/proyecto.service.interface';
+import type { IProyectosRepository } from 'src/proyectos/repositories/proyecto.repository.interface';
 import { Reclamo } from '../schemas/reclamo.schema';
 import { PaginatedReclamoResponseDto } from '../dto/pag-reclamo-response.dto';
 import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
@@ -53,6 +54,9 @@ export class ReclamoService implements IReclamoService {
     // Inyectamos el servicio de proyectos para obtener el área
     @Inject('IProyectosService')
     private readonly proyectosService: IProyectosService,
+    // Inyectamos el repositorio de proyectos para validación directa
+    @Inject('IProyectosRepository')
+    private readonly proyectosRepository: IProyectosRepository,
 
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @Inject(IImagenRepository)
@@ -81,10 +85,23 @@ export class ReclamoService implements IReclamoService {
     // "El area viene de la mano con proyecto"
     let areaId: string;
     try {
-      const proyecto = await this.proyectosService.findById(data.fkProyecto);
-      if (!proyecto) { // Doble check por seguridad
+      // Obtener proyecto directamente del repositorio sin validación de acceso
+      const proyecto = await this.proyectosRepository.findById(data.fkProyecto);
+      if (!proyecto) {
         throw new NotFoundException('El proyecto indicado no existe.');
       }
+      
+      // Validar que el proyecto pertenece al cliente (US 7)
+      const proyectoClienteId = proyecto.cliente && (proyecto.cliente as any)._id
+        ? String((proyecto.cliente as any)._id)
+        : String(proyecto.cliente);
+      
+      if (proyectoClienteId !== userId) {
+        throw new ForbiddenException(
+          'No tienes permiso para crear reclamos en este proyecto. Solo puedes crear reclamos en proyectos que te pertenecen.'
+        );
+      }
+      
       // Convertimos a string por seguridad. El campo `areaResponsable` puede venir como ObjectId
       // o como documento poblado (objeto). En el segundo caso extraemos su _id.
       if (proyecto.areaResponsable && (proyecto.areaResponsable as any)._id) {
@@ -98,8 +115,8 @@ export class ReclamoService implements IReclamoService {
       }
 
     } catch (error) {
-      // Capturamos errores del servicio de proyectos
-      if (error instanceof NotFoundException) throw error;
+      // Capturamos errores del repositorio de proyectos
+      if (error instanceof NotFoundException || error instanceof ForbiddenException || error instanceof ConflictException) throw error;
       throw new BadRequestException('Error al validar el proyecto asociado.');
     }
 
@@ -202,14 +219,47 @@ export class ReclamoService implements IReclamoService {
     };
   }
 
-  async findById(id: string, userRole?: string): Promise<Reclamo> {
+  async findById(id: string, userId?: string, userRole?: string): Promise<Reclamo> {
     const reclamo = await this.reclamoRepository.findById(id, true); // populate = true
     if (!reclamo) {
       throw new NotFoundException(`Reclamo con ID ${id} no encontrado.`);
     }
 
+    // Validar acceso según el rol
+    const roleNormalized = userRole ? String(userRole).toUpperCase() : '';
+    
+    if (roleNormalized === 'CLIENTE' && userId) {
+      // CLIENTE solo puede ver sus propios reclamos
+      const reclamoClienteId = reclamo.fkCliente && (reclamo.fkCliente as any)._id
+        ? String((reclamo.fkCliente as any)._id)
+        : String(reclamo.fkCliente);
+      
+      if (reclamoClienteId !== userId) {
+        throw new ForbiddenException('No tienes permiso para acceder a este reclamo. Solo puedes ver tus propios reclamos.');
+      }
+    } else if (roleNormalized === 'ENCARGADO' && userId) {
+      // ENCARGADO solo puede ver reclamos de sus áreas asignadas
+      const encargado = await this.userModel.findById(userId).populate('areas').exec();
+      if (!encargado || !encargado.areas || !Array.isArray(encargado.areas) || encargado.areas.length === 0) {
+        throw new ForbiddenException('No tienes áreas asignadas. No puedes acceder a reclamos.');
+      }
+      
+      const encargadoAreas = encargado.areas.map((area: any) =>
+        area && area._id ? String(area._id) : String(area),
+      );
+      
+      const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
+        ? String((reclamo.fkArea as any)._id)
+        : String(reclamo.fkArea);
+      
+      if (!encargadoAreas.includes(reclamoAreaId)) {
+        throw new ForbiddenException('No tienes permiso para acceder a este reclamo. Solo puedes ver reclamos de tus áreas asignadas.');
+      }
+    }
+    // GERENTE: puede ver todos los reclamos sin restricciones
+
     // Solo mostrar encargados si el usuario es Encargado o Gerente
-    const isStaff = userRole === 'ENCARGADO' || userRole === 'GERENTE';
+    const isStaff = roleNormalized === 'ENCARGADO' || roleNormalized === 'GERENTE';
     if (!isStaff) {
       // Remover el campo encargados para usuarios que no sean staff
       (reclamo as any).encargados = undefined;

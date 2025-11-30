@@ -12,7 +12,7 @@ import { RolesGuard } from './guards/roles.guard';
 @Module({
   imports: [
     JwtModule,
-    forwardRef(() => UsersModule), // Necesario para usar UsersService en AuthService
+    forwardRef(() => UsersModule), // Necesario para usar UsersService en AuthService y AuthGuard
   ],
   controllers: [AuthController],
   providers: [AuthService, AuthGuard, JwtService, RolesGuard],
@@ -20,6 +20,7 @@ import { RolesGuard } from './guards/roles.guard';
     AuthGuard, //Exportamos AuthGuard porque lo usamos en el resto de la app
     RolesGuard,
     JwtModule,
+    forwardRef(() => UsersModule), // Re-exportamos UsersModule para que AuthGuard tenga acceso a IUsersService
   ],
 })
 export class AuthModule {}

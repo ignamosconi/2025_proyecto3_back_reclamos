@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { CreateProyectoDto } from '../dto/create-proyecto.dto';
 import { UpdateProyectoDto } from '../dto/update-proyecto.dto';
 import { ProyectoDocument } from '../schemas/proyecto.schema';
@@ -65,17 +65,74 @@ export class ProyectosService implements IProyectosService {
     return this.proyectoRepository.create(data);
   }
 
-  async findAll(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto> {
-    // Se aplica el filtro tal cual viene del Controlador
-    return this.proyectoRepository.findAll(query);
+  async findAll(query: GetProyectosQueryDto, userId?: string, userRole?: string): Promise<PaginationResponseProyectoDto> {
+    // Filtrar según el rol del usuario (US 14)
+    let clienteFilter: string | undefined = undefined;
+    let areasFilter: string[] | undefined = undefined;
+    
+    const roleNormalized = userRole ? String(userRole).toUpperCase() : '';
+    
+    if (roleNormalized === 'CLIENTE' && userId) {
+      // CLIENTE solo ve sus propios proyectos
+      clienteFilter = userId;
+    } else if (roleNormalized === 'ENCARGADO' && userId) {
+      // ENCARGADO solo ve proyectos de sus áreas asignadas
+      const encargado = await this.userModel.findById(userId).populate('areas').exec();
+      if (encargado && encargado.areas && Array.isArray(encargado.areas)) {
+        areasFilter = encargado.areas.map((area: any) =>
+          area && area._id ? String(area._id) : String(area),
+        );
+        // Si el encargado no tiene áreas asignadas, no podrá ver ningún proyecto
+        if (areasFilter.length === 0) {
+          areasFilter = ['000000000000000000000000']; // ID inválido para que no retorne resultados
+        }
+      }
+    }
+    // GERENTE: no se aplican filtros adicionales (ve todos)
+    
+    return this.proyectoRepository.findAll(query, clienteFilter, areasFilter);
   }
 
-  async findById(id: string): Promise<ProyectoDocument> {
+  async findById(id: string, userId?: string, userRole?: string): Promise<ProyectoDocument> {
     const proyecto = await this.proyectoRepository.findById(id); 
 
     if (!proyecto) {
       throw new NotFoundException(`Proyecto con ID ${id} no encontrado.`);
     }
+
+    // Validar acceso según el rol (US 14)
+    const roleNormalized = userRole ? String(userRole).toUpperCase() : '';
+    
+    if (roleNormalized === 'CLIENTE' && userId) {
+      // CLIENTE solo puede ver sus propios proyectos
+      const proyectoClienteId = proyecto.cliente && (proyecto.cliente as any)._id
+        ? String((proyecto.cliente as any)._id)
+        : String(proyecto.cliente);
+      
+      if (proyectoClienteId !== userId) {
+        throw new ForbiddenException('No tienes permiso para acceder a este proyecto. Solo puedes ver tus propios proyectos.');
+      }
+    } else if (roleNormalized === 'ENCARGADO' && userId) {
+      // ENCARGADO solo puede ver proyectos de sus áreas
+      const encargado = await this.userModel.findById(userId).populate('areas').exec();
+      if (!encargado || !encargado.areas || !Array.isArray(encargado.areas) || encargado.areas.length === 0) {
+        throw new ForbiddenException('No tienes áreas asignadas. No puedes acceder a proyectos.');
+      }
+      
+      const encargadoAreas = encargado.areas.map((area: any) =>
+        area && area._id ? String(area._id) : String(area),
+      );
+      
+      const proyectoAreaId = proyecto.areaResponsable && (proyecto.areaResponsable as any)._id
+        ? String((proyecto.areaResponsable as any)._id)
+        : String(proyecto.areaResponsable);
+      
+      if (!encargadoAreas.includes(proyectoAreaId)) {
+        throw new ForbiddenException('No tienes permiso para acceder a este proyecto. Solo puedes ver proyectos de tus áreas asignadas.');
+      }
+    }
+    // GERENTE: puede ver todos los proyectos sin restricciones
+    
     return proyecto;
   }
 
