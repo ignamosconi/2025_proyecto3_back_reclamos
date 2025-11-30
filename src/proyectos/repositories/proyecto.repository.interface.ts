@@ -7,7 +7,7 @@ import { GetProyectosQueryDto } from '../dto/get-proyecto-query.dto';
 export interface IProyectosRepository {
   create(data: CreateProyectoDto): Promise<ProyectoDocument>;
   findById(id: string): Promise<ProyectoDocument | null>;
-  findAll(query?: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto>;
+  findAll(query?: GetProyectosQueryDto, clienteFilter?: string, areasFilter?: string[]): Promise<PaginationResponseProyectoDto>;
   findByName(nombre: string): Promise<ProyectoDocument | null>;
   update(id: string, data: UpdateProyectoDto): Promise<ProyectoDocument | null>;
   softDelete(id: string): Promise<ProyectoDocument | null>;

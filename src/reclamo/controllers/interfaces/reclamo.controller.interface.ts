@@ -21,7 +21,7 @@ export interface IReclamoController {
     req: RequestWithUser,
   ): Promise<PaginatedReclamoResponseDto>;
 
-  getReclamoById(id: string): Promise<ReclamoResponseDto>;
+  getReclamoById(id: string, req: RequestWithUser): Promise<ReclamoResponseDto>;
 
   updateReclamo(
     id: string,

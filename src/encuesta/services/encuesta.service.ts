@@ -38,12 +38,9 @@ export class EncuestaService implements IEncuestaService {
     clienteId: string,
     reclamoId: string,
   ): Promise<EncuestaDocument> {
-    // 1. Validar que el reclamo existe
-    const reclamo = await this.reclamoService.findById(reclamoId);
-    if (!reclamo) {
-      this.logger.warn(`Intento de crear encuesta para reclamo inexistente: ${reclamoId}`);
-      throw new NotFoundException(`Reclamo con ID ${reclamoId} no encontrado.`);
-    }
+    // 1. Validar que el reclamo existe y que el cliente tiene acceso
+    // (el servicio valida que el cliente solo vea sus propios reclamos)
+    const reclamo = await this.reclamoService.findById(reclamoId, clienteId, UserRole.CLIENTE);
 
     // 2. Validar que el reclamo está en estado final (RESUELTO o RECHAZADO)
     if (

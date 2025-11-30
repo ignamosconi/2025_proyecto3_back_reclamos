@@ -45,16 +45,30 @@ export class ProyectosRepository implements IProyectosRepository {
       .exec();
   }
 
-  async findAll(query: GetProyectosQueryDto): Promise<PaginationResponseProyectoDto> {
+  async findAll(query: GetProyectosQueryDto, clienteFilter?: string, areasFilter?: string[]): Promise<PaginationResponseProyectoDto> {
     
     // 1. Desglose de parámetros con valores por defecto
     const { page = 1, limit = 10, sort, search, cliente, areaResponsable } = query;
 
     // 2. Construir Filtros Base (Soft-Delete + Filtros del DTO)
-    const dbFilters: any = { ...this.activeFilter }; // { activo: true }
+    const dbFilters: any = { ...this.activeFilter }; // { deletedAt: null }
 
-    if (cliente) dbFilters.cliente = new Types.ObjectId(cliente);
-    if (areaResponsable) dbFilters.areaResponsable = new Types.ObjectId(areaResponsable);
+    // 3. Aplicar filtros de seguridad por rol (US 14)
+    if (clienteFilter) {
+      // Si viene un filtro de cliente (CLIENTE solo ve sus proyectos), aplicarlo
+      dbFilters.cliente = new Types.ObjectId(clienteFilter);
+    } else if (cliente) {
+      // Si viene en el query, aplicarlo (solo si no hay filtro de seguridad)
+      dbFilters.cliente = new Types.ObjectId(cliente);
+    }
+
+    if (areasFilter && areasFilter.length > 0) {
+      // Si viene un filtro de áreas (ENCARGADO solo ve proyectos de sus áreas), aplicarlo
+      dbFilters.areaResponsable = { $in: areasFilter.map(id => new Types.ObjectId(id)) };
+    } else if (areaResponsable) {
+      // Si viene en el query, aplicarlo (solo si no hay filtro de seguridad)
+      dbFilters.areaResponsable = new Types.ObjectId(areaResponsable);
+    }
 
     // 3. Aplicar Filtro de Búsqueda (Search)
     if (search) {

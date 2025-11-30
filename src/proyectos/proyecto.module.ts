@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Proyecto, ProyectoSchema } from './schemas/proyecto.schema';
 import { UsersModule } from 'src/users/users.module';
 import { AreasResponsablesModule } from 'src/areasResponsables/areas-responsables.module';
+import { AuthModule } from 'src/auth/auth.module';
 import { ProyectosController } from './controllers/proyecto.controller';
 import { ProyectosRepository } from './repositories/proyecto.repository';
 import { ProyectosService } from './services/proyecto.service';
@@ -17,6 +18,8 @@ import { ProyectosService } from './services/proyecto.service';
     UsersModule,
     // Importar AreasResponsablesModule para asegurar que el modelo 'Area' esté registrado
     AreasResponsablesModule,
+    // Importar AuthModule para usar AuthGuard y RolesGuard
+    AuthModule,
     // Si Proyecto tuviera referencias a otros módulos (como UsersModule, AreasModule)
     // esos módulos deberían importarse aquí si se necesitan sus servicios.
   ],

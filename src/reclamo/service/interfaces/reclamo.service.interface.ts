@@ -26,10 +26,11 @@ export interface IReclamoService {
 
   /**
    * Obtiene un reclamo por ID con sus relaciones pobladas.
+   * Valida acceso según rol: CLIENTE solo sus reclamos, ENCARGADO solo reclamos de sus áreas.
    * Si userRole es 'Encargado' o 'Gerente', incluye los encargados asignados.
    * Si es 'Cliente' o no autenticado, no incluye los encargados.
    */
-  findById(id: string, userRole?: string): Promise<Reclamo>;
+  findById(id: string, userId?: string, userRole?: string): Promise<Reclamo>;
 
   /**
    * Modifica título y descripción. Solo permitido si el reclamo está en PENDIENTE.
