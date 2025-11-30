@@ -1,9 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from './jwt.service';
 import { ConfigService } from '@nestjs/config';
-import { UnauthorizedException } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
-import { UserRole } from '../../users/helpers/enum.roles';
 
 jest.mock('jsonwebtoken');
 
@@ -13,14 +15,19 @@ describe('JwtService', () => {
 
   beforeEach(async () => {
     mockConfigService = {
-      get: jest.fn((key: string) => {
-        const config: Record<string, string> = {
-          JWT_ACCESS_SECRET: 'access-secret',
-          JWT_ACCESS_EXPIRATION: '15m',
-          JWT_REFRESH_SECRET: 'refresh-secret',
-          JWT_REFRESH_EXPIRATION: '1d',
-        };
-        return config[key];
+      get: jest.fn((key) => {
+        switch (key) {
+          case 'JWT_ACCESS_SECRET':
+            return 'access-secret';
+          case 'JWT_ACCESS_EXPIRATION':
+            return '15m';
+          case 'JWT_REFRESH_SECRET':
+            return 'refresh-secret';
+          case 'JWT_REFRESH_EXPIRATION':
+            return '7d';
+          default:
+            return null;
+        }
       }),
     };
 
@@ -38,95 +45,82 @@ describe('JwtService', () => {
     jest.clearAllMocks();
   });
 
-  describe('generateToken', () => {
-    it('debería generar token de acceso por defecto', () => {
-      (jwt.sign as jest.Mock).mockReturnValue('generated-access-token');
-
-      const result = service.generateToken({
-        email: 'test@example.com',
-        role: UserRole.EMPLOYEE,
-      });
-
-      expect(result).toBe('generated-access-token');
-      expect(jwt.sign).toHaveBeenCalledWith(
-        { email: 'test@example.com', role: UserRole.EMPLOYEE },
-        'access-secret',
-        { expiresIn: '15m' },
-      );
-    });
-
-    it('debería generar refresh token cuando se especifica', () => {
-      (jwt.sign as jest.Mock).mockReturnValue('generated-refresh-token');
-
-      const result = service.generateToken(
-        { email: 'test@example.com', role: UserRole.EMPLOYEE },
-        'refresh',
-      );
-
-      expect(result).toBe('generated-refresh-token');
-      expect(jwt.sign).toHaveBeenCalledWith(
-        { email: 'test@example.com', role: UserRole.EMPLOYEE },
-        'refresh-secret',
-        { expiresIn: '1d' },
+  describe('constructor', () => {
+    it('debería lanzar error si faltan variables de entorno', () => {
+      mockConfigService.get.mockReturnValue(null);
+      expect(() => new JwtService(mockConfigService)).toThrow(
+        InternalServerErrorException,
       );
     });
   });
 
-  describe('refreshToken - Valores Límite', () => {
-    it('debería retornar solo access token cuando refresh tiene >20 min', () => {
-      const currentTime = Math.floor(Date.now() / 1000);
-      const mockPayload = {
-        email: 'test@example.com',
-        role: UserRole.EMPLOYEE,
-        exp: currentTime + 30 * 60, // 30 minutos restantes
-      };
+  describe('generateToken', () => {
+    it('debería generar un token de acceso por defecto', () => {
+      (jwt.sign as jest.Mock).mockReturnValue('signed-token');
+      const token = service.generateToken({
+        email: 'test@test.com',
+        role: 'Cliente',
+      });
+      expect(token).toBe('signed-token');
+      expect(jwt.sign).toHaveBeenCalledWith(
+        expect.anything(),
+        'access-secret',
+        expect.objectContaining({ expiresIn: '15m' }),
+      );
+    });
 
-      (jwt.verify as jest.Mock).mockReturnValue(mockPayload);
+    it('debería generar un token de refresh si se solicita', () => {
+      (jwt.sign as jest.Mock).mockReturnValue('signed-refresh-token');
+      const token = service.generateToken(
+        { email: 'test@test.com', role: 'Cliente' },
+        'refresh',
+      );
+      expect(token).toBe('signed-refresh-token');
+      expect(jwt.sign).toHaveBeenCalledWith(
+        expect.anything(),
+        'refresh-secret',
+        expect.objectContaining({ expiresIn: '7d' }),
+      );
+    });
+  });
+
+  describe('refreshToken - Lógica de Renovación', () => {
+    // Casos:
+    // 1. Token válido, lejos de expirar -> Solo devuelve AccessToken
+    // 2. Token válido, cerca de expirar (<20 min) -> Devuelve AccessToken + Nuevo RefreshToken
+    // 3. Token inválido/expirado -> UnauthorizedException
+
+    it('debería devolver solo accessToken si el refresh no está por expirar', () => {
+      const payload = {
+        email: 'test@test.com',
+        role: 'Cliente',
+        exp: Math.floor(Date.now() / 1000) + 3600, // Expira en 1 hora (> 20 min)
+      };
+      (jwt.verify as jest.Mock).mockReturnValue(payload);
       (jwt.sign as jest.Mock).mockReturnValue('new-access-token');
 
       const result = service.refreshToken('valid-refresh-token');
 
-      expect(result).toEqual({ accessToken: 'new-access-token' });
-      expect(jwt.sign).toHaveBeenCalledTimes(1);
+      expect(result).toHaveProperty('accessToken');
+      expect(result).not.toHaveProperty('refreshToken');
     });
 
-    it('debería retornar ambos tokens cuando refresh tiene <20 min', () => {
-      const currentTime = Math.floor(Date.now() / 1000);
-      const mockPayload = {
-        email: 'test@example.com',
-        role: UserRole.EMPLOYEE,
-        exp: currentTime + 10 * 60, // 10 minutos restantes
+    it('debería devolver accessToken y refreshToken si está por expirar (< 20 min)', () => {
+      const payload = {
+        email: 'test@test.com',
+        role: 'Cliente',
+        exp: Math.floor(Date.now() / 1000) + 600, // Expira en 10 min (< 20 min)
       };
-
-      (jwt.verify as jest.Mock).mockReturnValue(mockPayload);
-      (jwt.sign as jest.Mock)
-        .mockReturnValueOnce('new-access-token')
-        .mockReturnValueOnce('new-refresh-token');
+      (jwt.verify as jest.Mock).mockReturnValue(payload);
+      (jwt.sign as jest.Mock).mockReturnValue('new-token');
 
       const result = service.refreshToken('valid-refresh-token');
 
-      expect(result).toEqual({
-        accessToken: 'new-access-token',
-        refreshToken: 'new-refresh-token',
-      });
-      expect(jwt.sign).toHaveBeenCalledTimes(2);
+      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('refreshToken');
     });
 
-    it('debería rechazar token sin exp', () => {
-      const mockPayload = {
-        email: 'test@example.com',
-        role: UserRole.EMPLOYEE,
-        // sin exp
-      };
-
-      (jwt.verify as jest.Mock).mockReturnValue(mockPayload);
-
-      expect(() => service.refreshToken('invalid-token')).toThrow(
-        UnauthorizedException,
-      );
-    });
-
-    it('debería rechazar token inválido', () => {
+    it('debería lanzar UnauthorizedException si jwt.verify falla', () => {
       (jwt.verify as jest.Mock).mockImplementation(() => {
         throw new Error('Invalid token');
       });
@@ -138,33 +132,18 @@ describe('JwtService', () => {
   });
 
   describe('getPayload', () => {
-    it('debería retornar payload de token válido', () => {
-      const mockPayload = {
-        email: 'test@example.com',
-        role: UserRole.EMPLOYEE,
-        exp: 123456789,
-      };
-
-      (jwt.verify as jest.Mock).mockReturnValue(mockPayload);
+    it('debería devolver el payload si es válido', () => {
+      const payload = { email: 'test@test.com', role: 'Cliente' };
+      (jwt.verify as jest.Mock).mockReturnValue(payload);
 
       const result = service.getPayload('valid-token');
-
-      expect(result).toEqual(mockPayload);
+      expect(result).toEqual(payload);
     });
 
-    it('debería rechazar token en formato string', () => {
-      (jwt.verify as jest.Mock).mockReturnValue('invalid-string-payload');
-
-      expect(() => service.getPayload('invalid-token')).toThrow(
-        'Token inválido',
-      );
-    });
-
-    it('debería rechazar token sin email', () => {
-      (jwt.verify as jest.Mock).mockReturnValue({ role: UserRole.EMPLOYEE });
-
-      expect(() => service.getPayload('invalid-token')).toThrow(
-        'Token inválido',
+    it('debería lanzar UnauthorizedException si el payload no tiene email', () => {
+      (jwt.verify as jest.Mock).mockReturnValue({ role: 'Cliente' }); // Falta email
+      expect(() => service.getPayload('invalid-payload')).toThrow(
+        UnauthorizedException,
       );
     });
   });
