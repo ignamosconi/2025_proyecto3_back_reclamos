@@ -85,6 +85,7 @@ describe('DashboardGerenteService', () => {
       const stateChangesMock = 200;
       const distributionMock = [
         { tipoReclamoId: 't1', tipoReclamoNombre: 'Tipo 1', cantidad: 50 },
+        { tipoReclamoId: 't2', tipoReclamoNombre: 'Tipo 2', cantidad: 50 },
       ]; // 50%
       const criticalClaimsMock = 10; // 10%
 
@@ -137,7 +138,7 @@ describe('DashboardGerenteService', () => {
 
     it('should apply filters correctly', async () => {
       const queryWithFilter: DashboardGerenteQueryDto = {
-        estado: EstadoReclamo.NUEVO,
+        estado: EstadoReclamo.PENDIENTE,
       };
 
       reclamoModel.aggregate.mockResolvedValue([]);
@@ -149,7 +150,7 @@ describe('DashboardGerenteService', () => {
 
       // Check first aggregate call (Workload)
       const firstCallArgs = reclamoModel.aggregate.mock.calls[0][0];
-      expect(firstCallArgs[0].$match.estado).toBe(EstadoReclamo.NUEVO);
+      expect(firstCallArgs[0].$match.estado).toBe(EstadoReclamo.PENDIENTE);
     });
   });
 });

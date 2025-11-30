@@ -34,10 +34,6 @@ describe('ComentarioService', () => {
       isEncargadoAssigned: jest.fn(),
     };
 
-    mockUserModel = {
-      // Mock methods if needed
-    };
-
     mockHistorialService = {
       create: jest.fn(),
     };

@@ -108,7 +108,7 @@ describe('AuthService', () => {
   });
 
   describe('resetPassword - Partición de Equivalencia y Valores Límite', () => {
-    // Clases de Equivalencia:
+    // Particiones de Equivalencia:
     // 1. Token válido y tiempo válido (Futuro) -> Éxito
     // 2. Token inválido (No encontrado) -> Error
     // 3. Token válido pero expirado (Pasado) -> Error

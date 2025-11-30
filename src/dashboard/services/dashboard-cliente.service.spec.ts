@@ -47,7 +47,9 @@ describe('DashboardClienteService', () => {
       const claimsPerProjectMock = [
         { proyectoId: 'p1', proyectoNombre: 'Proyecto 1', cantidad: 5 },
       ];
-      const claimsByStatusMock = [{ _id: EstadoReclamo.NUEVO, cantidad: 3 }];
+      const claimsByStatusMock = [
+        { _id: EstadoReclamo.PENDIENTE, cantidad: 3 },
+      ];
       const resolutionTimeMock = [{ totalDays: 10, count: 2 }];
       const totalClaimsMock = 10;
 
@@ -64,7 +66,7 @@ describe('DashboardClienteService', () => {
       expect(result).toBeDefined();
       expect(result.claimsPerProject).toEqual(claimsPerProjectMock);
       expect(result.claimsByStatus).toEqual([
-        { estado: EstadoReclamo.NUEVO, cantidad: 3 },
+        { estado: EstadoReclamo.PENDIENTE, cantidad: 3 },
       ]);
       expect(result.averageResolutionTime).toBe(5); // 10 / 2
       expect(result.totalClaims).toBe(totalClaimsMock);

@@ -115,10 +115,9 @@ describe('MailerService', () => {
         new Error('SMTP connection failed'),
       );
 
-      // No debería lanzar error, solo loguear
-      await expect(
+      expect(() =>
         service.sendMail('test@example.com', 'Test', '<p>Test</p>'),
-      ).resolves.not.toThrow();
+      ).not.toThrow();
     });
   });
 

@@ -16,7 +16,12 @@ export class User {
   @Prop({ required: true })
   password: string;
 
-  @Prop({ required: true, enum: UserRole, default: UserRole.CLIENTE })
+  @Prop({
+    required: true,
+    type: String,
+    enum: UserRole,
+    default: UserRole.CLIENTE,
+  })
   role: UserRole;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'Area' }], default: [] })

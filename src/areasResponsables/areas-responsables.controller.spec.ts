@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AreasResponsablesController } from './areas-responsables.controller';
 import { IAREAS_RESPONSABLES_SERVICE } from './interfaces/areas-responsables.service.interface';
 
+import { AuthGuard } from '../auth/guards/auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+
 describe('AreasResponsablesController', () => {
   let controller: AreasResponsablesController;
   let mockService: any;
@@ -23,7 +26,12 @@ describe('AreasResponsablesController', () => {
       providers: [
         { provide: IAREAS_RESPONSABLES_SERVICE, useValue: mockService },
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get<AreasResponsablesController>(
       AreasResponsablesController,

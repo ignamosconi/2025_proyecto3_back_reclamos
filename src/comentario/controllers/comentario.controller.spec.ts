@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ComentarioController } from './comentario.controller';
 import { ICOMENTARIO_SERVICE } from '../services/interfaces/comentario.service.interface';
 
+import { AuthGuard } from '../../auth/guards/auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+
 describe('ComentarioController', () => {
   let controller: ComentarioController;
   let mockService: any;
@@ -20,7 +23,12 @@ describe('ComentarioController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ComentarioController],
       providers: [{ provide: ICOMENTARIO_SERVICE, useValue: mockService }],
-    }).compile();
+    })
+      .overrideGuard(AuthGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: jest.fn(() => true) })
+      .compile();
 
     controller = module.get<ComentarioController>(ComentarioController);
   });

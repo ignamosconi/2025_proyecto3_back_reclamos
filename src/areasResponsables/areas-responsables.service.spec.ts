@@ -123,4 +123,57 @@ describe('AreasResponsablesService', () => {
       }
     });
   });
+
+  describe('findAll', () => {
+    it('should return paginated areas', async () => {
+      const response = { data: [mockArea], total: 1 };
+      mockRepository.findAll.mockResolvedValue(response);
+      const result = await service.findAll({});
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('findDeleted', () => {
+    it('should return deleted areas', async () => {
+      const response = { data: [mockArea], total: 1 };
+      mockRepository.findDeleted.mockResolvedValue(response);
+      const result = await service.findDeleted({});
+      expect(result).toEqual(response);
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return an area by id', async () => {
+      mockRepository.findOne.mockResolvedValue(mockArea);
+      const result = await service.findOne('id-123');
+      expect(result).toEqual(mockArea);
+    });
+  });
+
+  describe('softDelete', () => {
+    it('should call repository softDelete', async () => {
+      mockRepository.softDelete.mockResolvedValue(mockArea);
+      const result = await service.softDelete('id-123');
+      expect(result).toEqual(mockArea);
+      expect(mockRepository.softDelete).toHaveBeenCalledWith('id-123');
+    });
+  });
+
+  describe('restore', () => {
+    it('should call repository restore', async () => {
+      mockRepository.restore.mockResolvedValue(mockArea);
+      const result = await service.restore('id-123');
+      expect(result).toEqual(mockArea);
+      expect(mockRepository.restore).toHaveBeenCalledWith('id-123');
+    });
+  });
+
+  describe('findByName', () => {
+    it('should return an area by name', async () => {
+      mockRepository.findByName.mockResolvedValue(mockArea);
+      const result = await service.findByName('Sistemas');
+      expect(result).toEqual(mockArea);
+      expect(mockRepository.findByName).toHaveBeenCalledWith('Sistemas');
+    });
+  });
 });

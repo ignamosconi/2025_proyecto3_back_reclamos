@@ -1,7 +1,4 @@
-import {
-  validatePasswordStrength,
-  defaultWeakPatterns,
-} from './password.validator';
+import { validatePasswordStrength } from './password.validator';
 import { BadRequestException } from '@nestjs/common';
 
 describe('PasswordValidator', () => {

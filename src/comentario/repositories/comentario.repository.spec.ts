@@ -3,6 +3,8 @@ import { ComentarioRepository } from './comentario.repository';
 import { getModelToken } from '@nestjs/mongoose';
 import { Comentario } from '../schemas/comentario.schema';
 
+import { Types } from 'mongoose';
+
 describe('ComentarioRepository', () => {
   let repository: ComentarioRepository;
   let mockModel: any;
@@ -33,7 +35,9 @@ describe('ComentarioRepository', () => {
 
   describe('create', () => {
     it('debería crear un comentario', async () => {
-      const result = await repository.create('Test', 'autor-id', 'reclamo-id');
+      const autorId = new Types.ObjectId().toString();
+      const reclamoId = new Types.ObjectId().toString();
+      const result = await repository.create('Test', autorId, reclamoId);
       expect(result).toBeDefined();
       expect(mockComentario.save).toHaveBeenCalled();
     });
@@ -41,12 +45,13 @@ describe('ComentarioRepository', () => {
 
   describe('findByReclamoId', () => {
     it('debería buscar y poblar comentarios', async () => {
+      const reclamoId = new Types.ObjectId().toString();
       const mockExec = jest.fn().mockResolvedValue([mockComentario]);
       const mockSort = jest.fn().mockReturnValue({ exec: mockExec });
       const mockPopulate = jest.fn().mockReturnValue({ sort: mockSort });
       mockModel.find.mockReturnValue({ populate: mockPopulate });
 
-      const result = await repository.findByReclamoId('reclamo-id');
+      const result = await repository.findByReclamoId(reclamoId);
 
       expect(result).toHaveLength(1);
       expect(mockModel.find).toHaveBeenCalled();
@@ -56,11 +61,12 @@ describe('ComentarioRepository', () => {
 
   describe('countByReclamoId', () => {
     it('debería contar documentos', async () => {
+      const reclamoId = new Types.ObjectId().toString();
       mockModel.countDocuments.mockReturnValue({
         exec: jest.fn().mockResolvedValue(5),
       });
 
-      const result = await repository.countByReclamoId('reclamo-id');
+      const result = await repository.countByReclamoId(reclamoId);
       expect(result).toBe(5);
     });
   });

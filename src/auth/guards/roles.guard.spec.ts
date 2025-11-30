@@ -51,7 +51,7 @@ describe('RolesGuard', () => {
     });
 
     it('debería denegar acceso si el usuario no tiene el rol requerido', () => {
-      mockReflector.getAllAndOverride.mockReturnValue([UserRole.ADMIN]);
+      mockReflector.getAllAndOverride.mockReturnValue([UserRole.GERENTE]);
       expect(guard.canActivate(mockContext)).toBe(false);
     });
   });

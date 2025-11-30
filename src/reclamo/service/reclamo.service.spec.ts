@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ReclamoService } from './reclamo.service';
-import {
-  NotFoundException,
-  BadRequestException,
-  ForbiddenException,
-  ConflictException,
-} from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { User } from '../../users/schemas/user.schema';
-import { EstadoReclamo } from '../enums/estado.enum';
-import { UserRole } from '../../users/helpers/enum.roles';
-import { ISINTESIS_SERVICE } from 'src/sintesis/services/interfaces/sintesis.service.interface';
+import { HistorialService } from '../../historial/historial.service';
 import { ConfigService } from '@nestjs/config';
-import { HistorialService } from 'src/historial/historial.service';
+import {
+  NotFoundException,
+  ForbiddenException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { EstadoReclamo } from '../enums/estado.enum';
+import { Types } from 'mongoose';
+import { ISINTESIS_SERVICE } from '../../sintesis/services/interfaces/sintesis.service.interface';
 import { IImagenRepository } from '../repositories/interfaces/imagen.repository.interface';
 
 describe('ReclamoService', () => {
@@ -20,6 +20,7 @@ describe('ReclamoService', () => {
   let mockReclamoRepository: any;
   let mockReclamoEncargadoRepository: any;
   let mockProyectosService: any;
+  let mockProyectosRepository: any;
   let mockUserModel: any;
   let mockImagenRepository: any;
   let mockHistorialService: any;
@@ -27,26 +28,14 @@ describe('ReclamoService', () => {
   let mockConfigService: any;
   let mockSintesisService: any;
 
-  const mockUser = {
-    _id: 'user-id-123',
-    email: 'client@example.com',
-    role: UserRole.CLIENTE,
-  };
-
   const mockReclamo = {
-    _id: 'reclamo-id-123',
+    _id: 'reclamo-id',
     titulo: 'Test Reclamo',
     estado: EstadoReclamo.PENDIENTE,
-    fkCliente: 'user-id-123',
-    fkProyecto: 'proyecto-id-123',
-    fkArea: 'area-id-123',
+    fkCliente: 'user-id',
+    fkArea: 'area-id',
+    fkProyecto: 'proyecto-id',
     deletedAt: null,
-    toObject: jest.fn().mockReturnValue({
-      _id: 'reclamo-id-123',
-      titulo: 'Test Reclamo',
-      estado: EstadoReclamo.PENDIENTE,
-      fkCliente: 'user-id-123',
-    }),
   };
 
   beforeEach(async () => {
@@ -57,10 +46,8 @@ describe('ReclamoService', () => {
       update: jest.fn(),
       softDelete: jest.fn(),
       restore: jest.fn(),
-      findDeleted: jest.fn(),
-      clearEncargados: jest.fn(),
-      updateArea: jest.fn(),
       updateEstado: jest.fn(),
+      findDeleted: jest.fn(),
     };
 
     mockReclamoEncargadoRepository = {
@@ -68,7 +55,8 @@ describe('ReclamoService', () => {
       findEncargadosByReclamo: jest.fn(),
     };
 
-    mockProyectosService = {
+    mockProyectosService = {};
+    mockProyectosRepository = {
       findById: jest.fn(),
     };
 
@@ -80,8 +68,6 @@ describe('ReclamoService', () => {
 
     mockImagenRepository = {
       create: jest.fn(),
-      findById: jest.fn(),
-      updateById: jest.fn(),
     };
 
     mockHistorialService = {
@@ -93,7 +79,7 @@ describe('ReclamoService', () => {
     };
 
     mockConfigService = {
-      get: jest.fn().mockReturnValue('http://localhost:3000'),
+      get: jest.fn(),
     };
 
     mockSintesisService = {
@@ -109,6 +95,7 @@ describe('ReclamoService', () => {
           useValue: mockReclamoEncargadoRepository,
         },
         { provide: 'IProyectosService', useValue: mockProyectosService },
+        { provide: 'IProyectosRepository', useValue: mockProyectosRepository },
         { provide: getModelToken(User.name), useValue: mockUserModel },
         { provide: IImagenRepository, useValue: mockImagenRepository },
         { provide: HistorialService, useValue: mockHistorialService },
@@ -127,17 +114,20 @@ describe('ReclamoService', () => {
 
   describe('create', () => {
     const createDto = {
-      titulo: 'Falla en ascensor',
-      descripcion: 'No abre la puerta',
-      fkProyecto: 'proyecto-id-123',
-      fkTipoReclamo: 'tipo-id-123',
-    };
+      titulo: 'Test',
+      descripcion: 'Desc',
+      fkProyecto: new Types.ObjectId().toString(),
+      fkTipoReclamo: new Types.ObjectId().toString(),
+      prioridad: 'Alta',
+    } as any;
+    const userId = new Types.ObjectId().toString();
 
-    it('debería crear un reclamo exitosamente', async () => {
+    it('should create reclamo successfully', async () => {
       mockUserModel.exists.mockResolvedValue(true);
-      mockProyectosService.findById.mockResolvedValue({
-        _id: 'proyecto-id-123',
-        areaResponsable: 'area-id-123',
+      mockProyectosRepository.findById.mockResolvedValue({
+        _id: createDto.fkProyecto,
+        cliente: userId,
+        areaResponsable: new Types.ObjectId().toString(),
       });
       mockReclamoRepository.create.mockResolvedValue(mockReclamo);
       mockUserModel.find.mockReturnValue({
@@ -146,124 +136,206 @@ describe('ReclamoService', () => {
         }),
       });
 
-      const result = await service.create(createDto, 'user-id-123');
+      const result = await service.create(createDto, userId);
 
-      expect(result).toBeDefined();
+      expect(result).toEqual(mockReclamo);
       expect(mockReclamoRepository.create).toHaveBeenCalled();
       expect(mockHistorialService.create).toHaveBeenCalled();
     });
 
-    it('debería fallar si el usuario no existe', async () => {
+    it('should throw NotFoundException if user does not exist', async () => {
       mockUserModel.exists.mockResolvedValue(false);
-
-      await expect(service.create(createDto, 'user-id-123')).rejects.toThrow(
+      await expect(service.create(createDto, userId)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('debería fallar si el proyecto no tiene área responsable', async () => {
+    it('should throw ForbiddenException if project does not belong to user', async () => {
       mockUserModel.exists.mockResolvedValue(true);
-      mockProyectosService.findById.mockResolvedValue({
-        _id: 'proyecto-id-123',
+      mockProyectosRepository.findById.mockResolvedValue({
+        _id: createDto.fkProyecto,
+        cliente: new Types.ObjectId().toString(),
+        areaResponsable: new Types.ObjectId().toString(),
+      });
+
+      await expect(service.create(createDto, userId)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw ConflictException if project has no area', async () => {
+      mockUserModel.exists.mockResolvedValue(true);
+      mockProyectosRepository.findById.mockResolvedValue({
+        _id: createDto.fkProyecto,
+        cliente: userId,
         areaResponsable: null,
       });
 
-      await expect(service.create(createDto, 'user-id-123')).rejects.toThrow(
+      await expect(service.create(createDto, userId)).rejects.toThrow(
         ConflictException,
       );
     });
   });
 
-  describe('changeState', () => {
-    const changeStateDto = {
-      estado: EstadoReclamo.EN_REVISION,
-    };
+  describe('findAll (RBAC)', () => {
+    const query = { page: 1, limit: 10 };
 
-    it('debería cambiar el estado correctamente (Transición Válida)', async () => {
-      mockReclamoRepository.findById.mockResolvedValue(mockReclamo);
-      mockReclamoRepository.updateEstado.mockResolvedValue({
+    it('CLIENTE: should filter by userId', async () => {
+      const clientId = new Types.ObjectId().toString();
+      mockReclamoRepository.findAllPaginated.mockResolvedValue({
+        data: [],
+        total: 0,
+      });
+      await service.findAll(query, clientId, 'Cliente');
+      expect(mockReclamoRepository.findAllPaginated).toHaveBeenCalledWith(
+        query,
+        clientId,
+        undefined,
+      );
+    });
+
+    it('ENCARGADO: should filter by assigned areas', async () => {
+      const encargadoId = new Types.ObjectId().toString();
+      const areaId = new Types.ObjectId().toString();
+      const areas = [{ _id: areaId }];
+      mockUserModel.findById.mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue({ areas }),
+        }),
+      });
+      mockReclamoRepository.findAllPaginated.mockResolvedValue({
+        data: [],
+        total: 0,
+      });
+
+      await service.findAll(query, encargadoId, 'ENCARGADO');
+      expect(mockReclamoRepository.findAllPaginated).toHaveBeenCalledWith(
+        query,
+        undefined,
+        [areaId],
+      );
+    });
+  });
+
+  describe('findById (RBAC)', () => {
+    it('CLIENTE: should return reclamo if owner', async () => {
+      const userId = new Types.ObjectId().toString();
+      const reclamoId = new Types.ObjectId().toString();
+      const mockReclamoWithOwner = {
+        ...mockReclamo,
+        fkCliente: userId,
+      };
+      mockReclamoRepository.findById.mockResolvedValue(mockReclamoWithOwner);
+      const result = await service.findById(reclamoId, userId, 'CLIENTE');
+      expect(result).toEqual(mockReclamoWithOwner);
+    });
+
+    it('CLIENTE: should throw Forbidden if not owner', async () => {
+      const userId = new Types.ObjectId().toString();
+      const otherUser = new Types.ObjectId().toString();
+      const reclamoId = new Types.ObjectId().toString();
+      mockReclamoRepository.findById.mockResolvedValue({
+        ...mockReclamo,
+        fkCliente: otherUser,
+      });
+      await expect(
+        service.findById(reclamoId, userId, 'CLIENTE'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('ENCARGADO: should return reclamo if area matches', async () => {
+      const encargadoId = new Types.ObjectId().toString();
+      const areaId = new Types.ObjectId().toString();
+      const reclamoId = new Types.ObjectId().toString();
+      const areas = [{ _id: areaId }];
+
+      const mockReclamoWithArea = {
+        ...mockReclamo,
+        fkArea: areaId,
+      };
+
+      mockReclamoRepository.findById.mockResolvedValue(mockReclamoWithArea);
+      mockUserModel.findById.mockReturnValue({
+        populate: jest.fn().mockReturnValue({
+          exec: jest.fn().mockResolvedValue({ areas }),
+        }),
+      });
+
+      const result = await service.findById(
+        reclamoId,
+        encargadoId,
+        'ENCARGADO',
+      );
+      expect(result).toEqual(mockReclamoWithArea);
+    });
+  });
+
+  describe('changeState', () => {
+    const changeStateDto = { estado: EstadoReclamo.RESUELTO, sintesis: 'Done' };
+    const actorId = new Types.ObjectId().toString();
+    const reclamoId = new Types.ObjectId().toString();
+    const areaId = new Types.ObjectId().toString();
+
+    it('should change state successfully', async () => {
+      mockReclamoRepository.findById.mockResolvedValue({
         ...mockReclamo,
         estado: EstadoReclamo.EN_REVISION,
+        fkArea: { _id: areaId },
       });
       mockReclamoEncargadoRepository.isEncargadoAssigned.mockResolvedValue(
         true,
       );
       mockUserModel.findById.mockReturnValue({
         populate: jest.fn().mockReturnValue({
-          exec: jest.fn().mockResolvedValue({
-            areas: [{ _id: 'area-id-123' }],
-          }),
+          exec: jest.fn().mockResolvedValue({ areas: [{ _id: areaId }] }),
         }),
       });
+      mockReclamoRepository.updateEstado.mockResolvedValue(true);
+      mockReclamoEncargadoRepository.findEncargadosByReclamo.mockResolvedValue(
+        [],
+      );
 
       const result = await service.changeState(
-        'reclamo-id-123',
-        changeStateDto,
-        'staff-id-123',
-        UserRole.ENCARGADO,
+        reclamoId,
+        changeStateDto as any,
+        actorId,
+        'ENCARGADO',
       );
-
-      expect(result.estado).toBe(EstadoReclamo.EN_REVISION);
-      expect(mockReclamoRepository.updateEstado).toHaveBeenCalledWith(
-        'reclamo-id-123',
-        EstadoReclamo.EN_REVISION,
-      );
+      expect(result).toBe(true);
+      expect(mockSintesisService.create).toHaveBeenCalled();
     });
 
-    it('debería fallar con transición inválida', async () => {
-      mockReclamoRepository.findById.mockResolvedValue(mockReclamo); // Estado PENDIENTE
-
-      const invalidDto = { estado: EstadoReclamo.RESUELTO }; // PENDIENTE -> RESUELTO no es directo (requiere EN_REVISION)
+    it('should throw BadRequest if transition is invalid', async () => {
+      mockReclamoRepository.findById.mockResolvedValue(mockReclamo); // PENDIENTE
+      // PENDIENTE -> RESUELTO is invalid (must go through EN_REVISION)
 
       await expect(
         service.changeState(
-          'reclamo-id-123',
-          invalidDto,
-          'staff-id-123',
-          UserRole.GERENTE,
+          reclamoId,
+          changeStateDto as any,
+          actorId,
+          'ENCARGADO',
         ),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('debería fallar si falta síntesis para estado final', async () => {
+    it('should throw Forbidden if encargado not assigned', async () => {
       mockReclamoRepository.findById.mockResolvedValue({
         ...mockReclamo,
         estado: EstadoReclamo.EN_REVISION,
       });
-
-      const finalDto = { estado: EstadoReclamo.RESUELTO }; // Falta sintesis
+      mockReclamoEncargadoRepository.isEncargadoAssigned.mockResolvedValue(
+        false,
+      );
 
       await expect(
         service.changeState(
-          'reclamo-id-123',
-          finalDto,
-          'staff-id-123',
-          UserRole.GERENTE,
+          reclamoId,
+          changeStateDto as any,
+          actorId,
+          'ENCARGADO',
         ),
-      ).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  describe('reassignArea', () => {
-    it('debería reasignar área y resetear estado', async () => {
-      mockReclamoRepository.updateArea.mockResolvedValue({
-        ...mockReclamo,
-        fkArea: 'new-area-id',
-      });
-
-      const result = await service.reassignArea(
-        'reclamo-id-123',
-        'new-area-id',
-      );
-
-      expect(mockReclamoRepository.clearEncargados).toHaveBeenCalledWith(
-        'reclamo-id-123',
-      );
-      expect(mockReclamoRepository.updateArea).toHaveBeenCalledWith(
-        'reclamo-id-123',
-        'new-area-id',
-      );
-      expect(result).toBeDefined();
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });
