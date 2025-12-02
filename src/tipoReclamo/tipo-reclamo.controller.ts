@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Inject, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -23,9 +23,9 @@ export class TipoReclamoController {
     private readonly service: ITipoReclamoService,
   ) {}
 
-  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
+  @Roles(UserRole.GERENTE)
   @Post()
-  @ApiOperation({ summary: 'Crear un tipo de reclamo' })
+  @ApiOperation({ summary: 'Crear un tipo de reclamo (Solo Gerente)' })
   create(@Body() dto: CreateTipoReclamoDto): Promise<TipoReclamoDocument> {
     console.log(`[TipoReclamoController] POST /tipo-reclamo - Creando tipo de reclamo: ${dto.nombre}`);
     return this.service.create(dto);
@@ -34,6 +34,10 @@ export class TipoReclamoController {
   @Roles(UserRole.CLIENTE, UserRole.ENCARGADO, UserRole.GERENTE)
   @Get()
   @ApiOperation({ summary: 'Obtener todos los tipos de reclamo activos (todos los roles pueden leer)' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'sort', required: false, enum: ['asc', 'desc'] })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Buscar por nombre o descripción' })
   @ApiOkResponse({ type: PaginationResponseTipoDto })
   findAll(@Query() query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
     console.log(`[TipoReclamoController] GET /tipo-reclamo - Listando tipos de reclamo activos con query:`, query);
@@ -65,9 +69,9 @@ export class TipoReclamoController {
     return this.service.findOne(id);
   }
 
-  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
+  @Roles(UserRole.GERENTE)
   @Patch(':id')
-  @ApiOperation({ summary: 'Actualizar un tipo de reclamo por ID' })
+  @ApiOperation({ summary: 'Actualizar un tipo de reclamo por ID (Solo Gerente)' })
   update(@Param('id', ParseObjectIdPipe) id: string, @Body() dto: UpdateTipoReclamoDto): Promise<TipoReclamoDocument | null> {
     console.log(`[TipoReclamoController] PATCH /tipo-reclamo/${id} - Actualizando tipo de reclamo con datos:`, dto);
     return this.service.update(id, dto);

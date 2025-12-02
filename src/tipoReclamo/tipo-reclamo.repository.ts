@@ -17,8 +17,17 @@ export class TipoReclamoRepository implements ITipoReclamoRepository {
   }
 
   async findAll(query: GetTipoReclamoQueryDto): Promise<PaginationResponseTipoDto> {
-    const { page = 1, limit = 10, sort = 'asc' } = query;
-    const filter = { deletedAt: null };
+    const { page = 1, limit = 10, sort = 'asc', search } = query;
+    const filter: any = { deletedAt: null };
+    
+    // Agregar búsqueda por nombre o descripción
+    if (search) {
+      filter.$or = [
+        { nombre: { $regex: search, $options: 'i' } },
+        { descripcion: { $regex: search, $options: 'i' } },
+      ];
+    }
+    
     const total = await this.model.countDocuments(filter);
 
     const data = await this.model

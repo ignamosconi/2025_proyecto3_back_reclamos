@@ -7,10 +7,14 @@ import { TipoReclamo, TipoReclamoSchema } from './schemas/tipo-reclamo.schema';
 import { ITIPO_RECLAMO_REPOSITORY } from './interfaces/tipo-reclamo.repository.interface';
 import { ITIPO_RECLAMO_SERVICE } from './interfaces/tipo-reclamo.service.interface';
 import { AuthModule } from 'src/auth/auth.module';
+import { Reclamo, ReclamoSchema } from 'src/reclamo/schemas/reclamo.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: TipoReclamo.name, schema: TipoReclamoSchema }]),
+    MongooseModule.forFeature([
+      { name: TipoReclamo.name, schema: TipoReclamoSchema },
+      { name: Reclamo.name, schema: ReclamoSchema },
+    ]),
     AuthModule,
   ],
   controllers: [TipoReclamoController],
