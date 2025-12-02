@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Inject, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -36,6 +36,7 @@ export class AreasResponsablesController {
   @Get()
   @ApiOperation({ summary: 'Obtener todas las áreas activas (Solo Gerente)' })
   @ApiOkResponse({ type: PaginationResponseAreaDto })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Buscar por nombre' })
   findAll(
     @Query() query: GetAreasQueryDto,
   ): Promise<PaginationResponseAreaDto> {
@@ -55,6 +56,7 @@ export class AreasResponsablesController {
   @Get('deleted')
   @ApiOperation({ summary: 'Obtener todas las áreas soft-deleted' })
   @ApiOkResponse({ type: PaginationResponseAreaDto })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Buscar por nombre' })
   findDeleted(
     @Query() query: GetAreasQueryDto,
   ): Promise<PaginationResponseAreaDto> {

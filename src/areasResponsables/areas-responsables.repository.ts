@@ -17,9 +17,15 @@ export class AreasResponsablesRepository implements IAreasResponsablesRepository
   }
 
   async findAll(query: GetAreasQueryDto):Promise<PaginationResponseAreaDto> {
-    const { page = 1, limit = 10, sort = 'asc' } = query;
+    const { page = 1, limit = 10, sort = 'asc', search } = query;
 
-    const filter = { deletedAt: null };
+    const filter: any = { deletedAt: null };
+    
+    // Agregar búsqueda por nombre
+    if (search) {
+      filter.nombre = { $regex: search, $options: 'i' };
+    }
+    
     const total = await this.model.countDocuments(filter);
 
     const data = await this.model
@@ -33,9 +39,15 @@ export class AreasResponsablesRepository implements IAreasResponsablesRepository
   }
 
   async findDeleted(query: GetAreasQueryDto): Promise<PaginationResponseAreaDto> {
-    const { page = 1, limit = 10, sort = 'asc' } = query;
+    const { page = 1, limit = 10, sort = 'asc', search } = query;
 
-    const filter = { deletedAt: { $ne: null } };
+    const filter: any = { deletedAt: { $ne: null } };
+    
+    // Agregar búsqueda por nombre
+    if (search) {
+      filter.nombre = { $regex: search, $options: 'i' };
+    }
+    
     const total = await this.model.countDocuments(filter);
 
     const data = await this.model

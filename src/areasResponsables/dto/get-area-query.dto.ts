@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsIn, Min } from 'class-validator';
+import { IsInt, IsOptional, IsIn, Min, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class GetAreasQueryDto {
@@ -21,4 +21,9 @@ export class GetAreasQueryDto {
   @IsOptional()
   @IsIn(['asc', 'desc'])
   sort?: 'asc' | 'desc' = 'asc';
+
+  @ApiPropertyOptional({ description: 'Buscar por nombre' })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

@@ -4,6 +4,7 @@ import { AreasResponsablesController } from './areas-responsables.controller';
 import { AreasResponsablesService } from './areas-responsables.service';
 import { AreasResponsablesRepository } from './areas-responsables.repository';
 import { Area, AreaSchema } from './schemas/area.schema';
+import { Reclamo, ReclamoSchema } from 'src/reclamo/schemas/reclamo.schema';
 import { AuthModule } from 'src/auth/auth.module';
 import { UsersModule } from 'src/users/users.module';
 
@@ -14,7 +15,10 @@ import {IAREAS_RESPONSABLES_SERVICE} from './interfaces/areas-responsables.servi
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Area.name, schema: AreaSchema }]),
+    MongooseModule.forFeature([
+      { name: Area.name, schema: AreaSchema },
+      { name: Reclamo.name, schema: ReclamoSchema },
+    ]),
     AuthModule,
     UsersModule, // Necesario para que AuthGuard tenga acceso a IUsersService
   ],
