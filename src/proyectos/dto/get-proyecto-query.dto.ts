@@ -51,4 +51,13 @@ export class GetProyectosQueryDto {
   @IsOptional()
   @IsString({ message: 'El campo de búsqueda debe ser un string.' })
   search?: string;
+
+  @ApiPropertyOptional({ 
+    description: 'Filtrar por estado del proyecto. "activo" para proyectos no eliminados, "inactivo" para eliminados.', 
+    example: 'activo',
+    enum: ['activo', 'inactivo']
+  })
+  @IsOptional()
+  @IsEnum(['activo', 'inactivo'], { message: 'El estado debe ser "activo" o "inactivo".' })
+  estado?: 'activo' | 'inactivo';
 }

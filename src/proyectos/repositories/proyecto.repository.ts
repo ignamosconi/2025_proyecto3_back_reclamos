@@ -48,10 +48,17 @@ export class ProyectosRepository implements IProyectosRepository {
   async findAll(query: GetProyectosQueryDto, clienteFilter?: string, areasFilter?: string[]): Promise<PaginationResponseProyectoDto> {
     
     // 1. Desglose de parámetros con valores por defecto
-    const { page = 1, limit = 10, sort, search, cliente, areaResponsable } = query;
+    const { page = 1, limit = 10, sort, search, cliente, areaResponsable, estado } = query;
 
     // 2. Construir Filtros Base (Soft-Delete + Filtros del DTO)
-    const dbFilters: any = { ...this.activeFilter }; // { deletedAt: null }
+    // Aplicar filtro de estado: 'activo' = deletedAt: null, 'inactivo' = deletedAt: { $ne: null }
+    const dbFilters: any = {};
+    if (estado === 'inactivo') {
+      dbFilters.deletedAt = { $ne: null };
+    } else {
+      // Por defecto o si es 'activo', mostrar solo proyectos activos
+      dbFilters.deletedAt = null;
+    }
 
     // 3. Aplicar filtros de seguridad por rol (US 14)
     if (clienteFilter) {
