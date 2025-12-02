@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Patch, Get, Param, Inject, Query, Delete, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Patch, Get, Param, Inject, Query, Delete, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '../auth/guards/auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -16,6 +16,8 @@ import { PaginationResponseUserDto } from './dto/pag-response-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import type { IUsersService } from './interfaces/users.service.interface';
 import { IUSERS_SERVICE } from './interfaces/users.service.interface';
+import type { RequestWithUser } from '../auth/interfaces/request-with-user.interface';
+import { DeleteUserDto } from './dto/delete-user.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -51,17 +53,18 @@ export class UsersController implements IUsersController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRole.CLIENTE, UserRole.ENCARGADO, UserRole.GERENTE)
-  @Patch('profile/:userId')
-  @ApiOperation({ summary: 'Actualizar perfil de un cliente' })
-  @ApiParam({ name: 'userId', type: String })
+  @Patch('profile')
+  @ApiOperation({ summary: 'Actualizar perfil del usuario autenticado' })
   @ApiBody({ type: UpdateProfileDto })
   @ApiResponse({ status: 200, description: 'Perfil actualizado', type: UserResponseDto })
   @ApiResponse({ status: 400, description: 'Usuario no encontrado o validación fallida' })
   updateProfile(
-    @Param('userId', ParseObjectIdPipe) userId: string, 
+    @Req() req: RequestWithUser,
     @Body() dto: UpdateProfileDto,
   ): Promise<Omit<UserDocument, 'password'> | null> {
-    console.log(`[UsersController] PATCH /users/profile/${userId} - Actualizando perfil de Cliente`);
+    console.log(`[UsersController] PATCH /users/profile - Actualizando perfil de usuario: ${req.user.email}`);
+    const userDoc = req.user as UserDocument;
+    const userId = userDoc._id ? userDoc._id.toString() : (userDoc as any).id?.toString() || '';
     return this.service.updateProfile(userId, dto);
   }
 
@@ -145,15 +148,17 @@ export class UsersController implements IUsersController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRole.GERENTE)
   @Delete(':userId')
-  @ApiOperation({ summary: 'Eliminar un usuario (soft delete)' })
+  @ApiOperation({ summary: 'Eliminar un usuario (soft delete) - Requiere confirmación de email' })
   @ApiParam({ name: 'userId', type: String })
+  @ApiBody({ type: DeleteUserDto })
   @ApiResponse({ status: 200, description: 'Usuario eliminado', type: UserResponseDto })
-  @ApiResponse({ status: 400, description: 'Usuario no encontrado o ya eliminado' })
+  @ApiResponse({ status: 400, description: 'Usuario no encontrado, ya eliminado o email de confirmación incorrecto' })
   softDelete(
-    @Param('userId', ParseObjectIdPipe) userId: string
+    @Param('userId', ParseObjectIdPipe) userId: string,
+    @Body() dto: DeleteUserDto
   ): Promise<Omit<UserDocument, 'password'> | null> {
-    console.log(`[UsersController] DELETE /users/${userId} - Soft-deleting usuario`);
-    return this.service.softDelete(userId);
+    console.log(`[UsersController] DELETE /users/${userId} - Soft-deleting usuario con confirmación`);
+    return this.service.softDelete(userId, dto.emailConfirmation);
   }
 
   @ApiBearerAuth()

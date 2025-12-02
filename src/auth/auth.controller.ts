@@ -20,6 +20,7 @@ import { ResetPasswordDTO } from './dto/reset-password.dto';
 import { RolesGuard } from './guards/roles.guard';
 import { Roles } from './decorators/roles.decorator';
 import { UserRole } from 'src/users/helpers/enum.roles';
+import { UserDocument } from 'src/users/schemas/user.schema';
 
 
 @ApiTags('Auth') // Agrupa en Swagger
@@ -119,8 +120,11 @@ export class AuthController implements IAuthController {
   async me(@Req() req: RequestWithUser) {
     //No tiene DTO porque es de práctica.
     console.log(`[AuthController] GET /auth/me - Devolviendo datos del usuario autenticado: ${req.user.email}`);
+    const userDoc = req.user as UserDocument;
+    const userId = userDoc._id ? userDoc._id.toString() : (userDoc as any).id?.toString() || '';
     return {
-      id: req.user.id,
+      id: userId,
+      _id: userId,
       email: req.user.email,
       firstName: req.user.firstName,
       lastName: req.user.lastName,

@@ -5,16 +5,18 @@ import { UpdateStaffDto } from '../dto/update-staff.dto';
 import { GetUsersQueryDto } from '../dto/get-users-query.dto';
 import { PaginationResponseUserDto } from '../dto/pag-response-user.dto';
 import { UserDocument } from '../schemas/user.schema';
+import { RequestWithUser } from '../../auth/interfaces/request-with-user.interface';
+import { DeleteUserDto } from '../dto/delete-user.dto';
 
 export interface IUsersController {
   registerClient(dto: CreateClientDto): Promise<Omit<UserDocument, 'password'>>;
   createStaff(dto: CreateStaffDto): Promise<Omit<UserDocument, 'password'>>;
-  updateProfile(userId: string, dto: UpdateProfileDto): Promise<Omit<UserDocument, 'password'> | null>;
+  updateProfile(req: RequestWithUser, dto: UpdateProfileDto): Promise<Omit<UserDocument, 'password'> | null>;
   updateStaff(userId: string, dto: UpdateStaffDto): Promise<Omit<UserDocument, 'password'> | null>;
   findAll(query: GetUsersQueryDto): Promise<PaginationResponseUserDto>;
   findDeleted(query: GetUsersQueryDto): Promise<PaginationResponseUserDto>;
   findByEmail(email: string): Promise<Omit<UserDocument, 'password'> | null>;
   findById(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
-  softDelete(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
+  softDelete(userId: string, dto: DeleteUserDto): Promise<Omit<UserDocument, 'password'> | null>;
   restore(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
 }

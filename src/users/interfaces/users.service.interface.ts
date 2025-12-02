@@ -15,7 +15,7 @@ export interface IUsersService {
   findDeleted(query: GetUsersQueryDto): Promise<PaginationResponseUserDto>;
   findByEmail(email: string): Promise<UserDocument | null>;
   findById(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
-  softDelete(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
+  softDelete(userId: string, emailConfirmation: string): Promise<Omit<UserDocument, 'password'> | null>;
   restore(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
 
   

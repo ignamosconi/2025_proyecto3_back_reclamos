@@ -87,6 +87,41 @@ export class UsersService implements IUsersService {
     }
 
     const user = await this.repository.createStaff(dto);
+    
+    // Enviar correo de bienvenida
+    const areasNames = await Promise.all(
+      dto.areaIds.map(async (areaId) => {
+        const area = await this.areaModel.findById(areaId);
+        return area ? area.nombre : '';
+      })
+    );
+    
+    const welcomeMessage = `
+      <h2>Bienvenido al Sistema de Gestión de Reclamos</h2>
+      <p>Estimado/a ${dto.firstName} ${dto.lastName},</p>
+      <p>Su cuenta ha sido creada exitosamente en el sistema.</p>
+      <p><strong>Detalles de su cuenta:</strong></p>
+      <ul>
+        <li><strong>Rol:</strong> ${dto.role}</li>
+        <li><strong>Email:</strong> ${dto.email}</li>
+        <li><strong>Áreas Responsables:</strong> ${areasNames.filter(n => n).join(', ') || 'Sin áreas asignadas'}</li>
+      </ul>
+      <p><strong>Instrucciones para el primer inicio de sesión:</strong></p>
+      <ol>
+        <li>Acceda al sistema utilizando su correo electrónico: <strong>${dto.email}</strong></li>
+        <li>Ingrese la contraseña temporal que le fue proporcionada</li>
+        <li>Le recomendamos cambiar su contraseña después del primer inicio de sesión para mayor seguridad</li>
+      </ol>
+      <p>Si tiene alguna pregunta o necesita asistencia, no dude en contactarnos.</p>
+      <p>Saludos cordiales,<br>Equipo de Gestión de Reclamos</p>
+    `;
+    
+    this.mailerService.sendMail(
+      dto.email,
+      'Bienvenido al Sistema de Gestión de Reclamos',
+      welcomeMessage,
+    );
+    
     return this.sanitize(user);
   }
 
@@ -169,10 +204,18 @@ export class UsersService implements IUsersService {
     return this.sanitize(user);
   }
 
-  async softDelete(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
-    const user = await this.repository.softDelete(userId);
+  async softDelete(userId: string, emailConfirmation: string): Promise<Omit<UserDocument, 'password'> | null> {
+    const user = await this.repository.findRawById(userId);
     if (!user) throw new BadRequestException(`Usuario con id ${userId} no existe`);
-    return this.sanitize(user);
+    if (user.deletedAt) throw new BadRequestException('El usuario ya está eliminado');
+    
+    // Validar que el email de confirmación coincida con el email del usuario
+    if (user.email.toLowerCase() !== emailConfirmation.toLowerCase()) {
+      throw new BadRequestException('El email de confirmación no coincide con el email del usuario');
+    }
+    
+    const deletedUser = await this.repository.softDelete(userId);
+    return this.sanitize(deletedUser);
   }
 
   async restore(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
