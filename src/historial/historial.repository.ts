@@ -18,7 +18,7 @@ export class HistorialRepository {
           return this.historialModel
                .find({ reclamoId: reclamoId })
                .sort({ fecha_hora: -1 }) // Orden descendente (más reciente primero)
-               .populate('responsable', 'nombre apellido email') // Poblar datos básicos del responsable
+               .populate('responsable', 'firstName lastName email') // Poblar datos básicos del responsable
                .exec();
      }
 }

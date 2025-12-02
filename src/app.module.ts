@@ -14,6 +14,7 @@ import { EncuestaModule } from './encuesta/encuesta.module';
 import { SintesisModule } from './sintesis/sintesis.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ComentarioModule } from './comentario/comentario.module';
+import { HistorialModule } from './historial/historial.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ComentarioModule } from './comentario/comentario.module';
     SintesisModule,
     DashboardModule,
     ComentarioModule,
+    HistorialModule,
 
   ],
   controllers: [AppController],
