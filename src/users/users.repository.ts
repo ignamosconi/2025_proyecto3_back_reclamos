@@ -56,7 +56,7 @@ export class UsersRepository implements IUsersRepository {
     const { limit = 10, page = 1, sort = 'asc', role, search } = query;
 
     const filter: any = { deletedAt: null };
-    if (role) filter.rol = role;
+    if (role) filter.role = role;
 
     if (search) {
       filter.$or = [
