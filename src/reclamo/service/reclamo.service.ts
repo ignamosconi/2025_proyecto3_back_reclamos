@@ -465,30 +465,27 @@ export class ReclamoService implements IReclamoService {
     const roleNormalized = String(actorRole || '').toUpperCase();
     if (roleNormalized !== 'GERENTE') {
       if (roleNormalized === 'ENCARGADO') {
-        // Verificar que el encargado está asignado al reclamo
-        const assigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, actorId);
-        if (!assigned) {
-          throw new ForbiddenException('No estás asignado a este reclamo.');
-        }
-
-        // Verificar que el encargado pertenece al área del reclamo
+        // US 10: El Encargado solo debe poder ver y gestionar los reclamos cuya Área Responsable 
+        // coincida con alguna de sus Áreas asignadas (ver US 4)
         const encargado = await this.userModel.findById(actorId).populate('areas').exec();
         if (!encargado) {
           throw new NotFoundException('Encargado no encontrado.');
         }
 
-        const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
-          ? String((reclamo.fkArea as any)._id)
-          : String(reclamo.fkArea);
+        if (!encargado.areas || !Array.isArray(encargado.areas) || encargado.areas.length === 0) {
+          throw new ForbiddenException('No tienes áreas asignadas. No puedes gestionar reclamos.');
+        }
 
-        const encargadoAreas = (encargado.areas || []).map((area: any) =>
+        const encargadoAreas = encargado.areas.map((area: any) =>
           area && area._id ? String(area._id) : String(area),
         );
 
+        const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
+          ? String((reclamo.fkArea as any)._id)
+          : String(reclamo.fkArea);
+        
         if (!encargadoAreas.includes(reclamoAreaId)) {
-          throw new ForbiddenException(
-            'No tienes permiso para gestionar reclamos de esta área. Solo puedes gestionar reclamos de tus áreas asignadas.',
-          );
+          throw new ForbiddenException('No tienes permiso para gestionar este reclamo. Solo puedes gestionar reclamos de tus áreas asignadas.');
         }
       } else {
         throw new ForbiddenException('Rol no autorizado para cambiar el estado.');

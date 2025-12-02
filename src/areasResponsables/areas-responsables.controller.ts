@@ -32,9 +32,9 @@ export class AreasResponsablesController {
     return this.service.create(dto);
   }
 
-  @Roles(UserRole.GERENTE)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
   @Get()
-  @ApiOperation({ summary: 'Obtener todas las áreas activas (Solo Gerente)' })
+  @ApiOperation({ summary: 'Obtener todas las áreas activas (Encargado, Gerente)' })
   @ApiOkResponse({ type: PaginationResponseAreaDto })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Buscar por nombre' })
   findAll(
@@ -64,9 +64,9 @@ export class AreasResponsablesController {
     return this.service.findDeleted(query);
   }
 
-  @Roles(UserRole.GERENTE)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
   @Get(':id')
-  @ApiOperation({ summary: 'Obtener un área por ID (Solo Gerente)' })
+  @ApiOperation({ summary: 'Obtener un área por ID (Encargado, Gerente)' })
   findOne(@Param('id', ParseObjectIdPipe) id: string): Promise<AreaDocument> {
     console.log(`[AreasResponsablesController] GET /area-reclamo/${id} - Obteniendo área por ID`);
     return this.service.findOne(id);
