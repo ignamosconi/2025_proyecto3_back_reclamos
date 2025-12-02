@@ -142,7 +142,63 @@ export class ReclamoController implements IReclamoController {
     const userId = String((req.user as any)._id);
     const userRole = (req.user as any).role || (req.user as any).rol;
     const reclamo = await this.reclamoService.findById(id, userId, userRole);
-    return reclamo.toObject() as ReclamoResponseDto;
+    
+    // Convertir imágenes de Buffer a base64 data URLs ANTES de toObject()
+    // Necesitamos acceder al documento de Mongoose directamente para obtener el Buffer
+    if ((reclamo as any).imagenes && Array.isArray((reclamo as any).imagenes)) {
+      (reclamo as any).imagenes = (reclamo as any).imagenes.map((imagen: any) => {
+        // Acceder al documento de Mongoose directamente para obtener el Buffer
+        const imagenBuffer = imagen.imagen; // Buffer del documento de Mongoose
+        const imagenDoc: any = {
+          _id: imagen._id,
+          nombre: imagen.nombre,
+          tipo: imagen.tipo,
+          fkReclamo: imagen.fkReclamo,
+          createdAt: imagen.createdAt,
+          updatedAt: imagen.updatedAt,
+        };
+        
+        // Si tiene el buffer de imagen, convertirlo a base64
+        if (imagenBuffer) {
+          let base64: string;
+          
+          if (Buffer.isBuffer(imagenBuffer)) {
+            base64 = imagenBuffer.toString('base64');
+          } else if (typeof imagenBuffer === 'string') {
+            // Si ya es string, podría ser base64 puro o data URL
+            if (imagenBuffer.startsWith('data:')) {
+              imagenDoc.url = imagenBuffer;
+              return imagenDoc;
+            }
+            base64 = imagenBuffer;
+          } else if (imagenBuffer && imagenBuffer.data) {
+            // Si es un objeto con propiedad data (puede pasar con algunos tipos)
+            base64 = Buffer.from(imagenBuffer.data).toString('base64');
+          } else {
+            // Intentar convertir directamente
+            try {
+              base64 = Buffer.from(imagenBuffer).toString('base64');
+            } catch (error) {
+              console.error('Error al convertir imagen a base64:', error);
+              return imagenDoc; // Retornar sin URL si falla
+            }
+          }
+          
+          // Crear data URL solo si tenemos base64 válido
+          if (base64 && base64.length > 0) {
+            const mimeType = imagenDoc.tipo || 'image/png';
+            imagenDoc.url = `data:${mimeType};base64,${base64}`;
+          }
+        }
+        
+        return imagenDoc;
+      });
+    }
+    
+    // Ahora convertir el reclamo a objeto
+    const reclamoObj = reclamo.toObject({ virtuals: true }) as any;
+    
+    return reclamoObj as ReclamoResponseDto;
   }
 
   @Put(':id')

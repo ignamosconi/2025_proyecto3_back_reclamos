@@ -268,6 +268,47 @@ export class ReclamoService implements IReclamoService {
     return reclamo;
   }
 
+  /**
+   * Convierte las imágenes de un reclamo de Buffer a base64 data URLs
+   * Este método se llama desde el controller después de toObject()
+   */
+  private convertImagenesToDataUrls(reclamoObj: any): void {
+    if (reclamoObj.imagenes && Array.isArray(reclamoObj.imagenes)) {
+      reclamoObj.imagenes = reclamoObj.imagenes.map((imagen: any) => {
+        const imagenDoc = imagen.toObject ? imagen.toObject({ virtuals: true }) : imagen;
+        
+        // Si tiene el buffer de imagen, convertirlo a base64
+        if (imagenDoc.imagen) {
+          let base64: string;
+          
+          if (Buffer.isBuffer(imagenDoc.imagen)) {
+            base64 = imagenDoc.imagen.toString('base64');
+          } else if (typeof imagenDoc.imagen === 'string') {
+            // Si ya es string, podría ser base64 puro o data URL
+            if (imagenDoc.imagen.startsWith('data:')) {
+              imagenDoc.url = imagenDoc.imagen;
+              delete imagenDoc.imagen;
+              return imagenDoc;
+            }
+            base64 = imagenDoc.imagen;
+          } else {
+            // Si no es Buffer ni string, intentar convertir
+            base64 = Buffer.from(imagenDoc.imagen).toString('base64');
+          }
+          
+          // Crear data URL
+          const mimeType = imagenDoc.tipo || 'image/png';
+          imagenDoc.url = `data:${mimeType};base64,${base64}`;
+          
+          // Remover el buffer para no enviarlo en la respuesta
+          delete imagenDoc.imagen;
+        }
+        
+        return imagenDoc;
+      });
+    }
+  }
+
   async update(id: string, data: UpdateReclamoDto, userId: string): Promise<Reclamo> {
     // 1. Validar propiedad y estado
     if (Object.keys(data).length === 0) {
