@@ -13,11 +13,10 @@ export class ReclamoEncargadoRepository implements IReclamoEncargadoRepository {
     private readonly model: Model<ReclamoEncargado>,
   ) { }
 
-  async assignEncargado(reclamoId: string, encargadoId: string, isPrincipal: boolean = false): Promise<ReclamoEncargado> {
+  async assignEncargado(reclamoId: string, encargadoId: string): Promise<ReclamoEncargado> {
     const createdAssignment = new this.model({
       fkReclamo: new Types.ObjectId(reclamoId),
       fkEncargado: new Types.ObjectId(encargadoId),
-      isPrincipal,
     });
     return createdAssignment.save();
   }
@@ -63,25 +62,5 @@ export class ReclamoEncargadoRepository implements IReclamoEncargadoRepository {
       .find({ fkReclamo: new Types.ObjectId(reclamoId) })
       .populate('fkEncargado', 'firstName lastName email role') // Poblar datos del usuario
       .exec();
-  }
-
-  async findPrincipalEncargado(reclamoId: string): Promise<ReclamoEncargado | null> {
-    return this.model
-      .findOne({ 
-        fkReclamo: new Types.ObjectId(reclamoId),
-        isPrincipal: true 
-      })
-      .populate('fkEncargado', 'firstName lastName email role')
-      .exec();
-  }
-
-  async updateIsPrincipal(reclamoId: string, encargadoId: string, isPrincipal: boolean): Promise<void> {
-    await this.model.updateOne(
-      {
-        fkReclamo: new Types.ObjectId(reclamoId),
-        fkEncargado: new Types.ObjectId(encargadoId),
-      },
-      { $set: { isPrincipal } }
-    ).exec();
   }
 }

@@ -44,31 +44,20 @@ export class ReclamoEncargadoService {
     const already = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, encargadoId);
     
     if (already) {
-      // Si ya estaba asignado, verificar si ya es principal
-      const principalExistente = await this.reclamoEncargadoRepository.findPrincipalEncargado(reclamoId);
-      
-      if (principalExistente) {
-        const principalId = principalExistente.fkEncargado && (principalExistente.fkEncargado as any)._id
-          ? String((principalExistente.fkEncargado as any)._id)
-          : String(principalExistente.fkEncargado);
-        
-        if (principalId !== encargadoId) {
-          throw new BadRequestException('Este reclamo ya tiene un encargado principal. No puedes autoasignarte.');
-        }
-        // Si ya es el principal, no hacemos nada más
-      } else {
-        // Si estaba asignado pero no hay principal, eliminamos y reasignamos como principal
-        await this.reclamoEncargadoRepository.unassignEncargado(reclamoId, encargadoId);
-        await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId, true);
+      // Si ya está asignado, verificar que no haya otro encargado
+      const encargadosCount = await this.reclamoEncargadoRepository.countEncargadosByReclamo(reclamoId);
+      if (encargadosCount > 1 || (encargadosCount === 1 && !already)) {
+        throw new BadRequestException('Este reclamo ya tiene un encargado asignado. No puedes autoasignarte.');
       }
+      // Si es el único asignado, no hacemos nada
     } else {
-      // Si no estaba asignado, verificar que no haya otro principal
-      const principalExistente = await this.reclamoEncargadoRepository.findPrincipalEncargado(reclamoId);
-      if (principalExistente) {
-        throw new BadRequestException('Este reclamo ya tiene un encargado principal. No puedes autoasignarte.');
+      // Verificar que no haya otro encargado asignado
+      const encargadosCount = await this.reclamoEncargadoRepository.countEncargadosByReclamo(reclamoId);
+      if (encargadosCount > 0) {
+        throw new BadRequestException('Este reclamo ya tiene un encargado asignado. No puedes autoasignarte.');
       }
-      // Asignar como principal
-      await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId, true);
+      // Asignar al encargado
+      await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId);
     }
 
     // Poner el reclamo en EN_REVISION si aún no lo está
@@ -181,14 +170,12 @@ export class ReclamoEncargadoService {
     if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
 
     const encargados = await this.reclamoEncargadoRepository.findEncargadosByReclamo(reclamoId);
-    // Retornar el objeto completo con isPrincipal incluido
     return encargados.map(e => {
       const encargadoObj = e.toObject ? e.toObject() : e;
       return {
         _id: encargadoObj._id,
         fkEncargado: encargadoObj.fkEncargado,
         fkReclamo: encargadoObj.fkReclamo,
-        isPrincipal: encargadoObj.isPrincipal,
         createdAt: encargadoObj.createdAt,
         updatedAt: encargadoObj.updatedAt,
       };
@@ -256,7 +243,7 @@ export class ReclamoEncargadoService {
     }
 
     // 9. Asignar el encargado
-    await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId, false);
+    await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId);
 
     // 10. Registrar en el historial
     await this.historialService.create(

@@ -37,17 +37,6 @@ export class ReclamoEncargado extends Document {
   })
   fkEncargado: MongooseSchema.Types.ObjectId; // FK a User (Encargado)
   
-  @ApiProperty({
-    description: 'Indica si este encargado es el principal (se autoasignó al reclamo)',
-    type: Boolean,
-    default: false,
-  })
-  @Prop({ 
-    type: Boolean, 
-    default: false,
-  })
-  isPrincipal: boolean; // Indica si es el encargado principal (autoasignado)
-  
   // Las propiedades de Mongoose 'createdAt' y 'updatedAt' se añaden automáticamente.
 }
 
