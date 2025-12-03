@@ -3,6 +3,7 @@ import {
   Inject,
   BadRequestException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { IUsersService } from './interfaces/users.service.interface';
 import type { IUsersRepository } from './interfaces/users.repository.interface';
@@ -23,6 +24,8 @@ import type { IMailerService } from 'src/mailer/interfaces/mailer.service.interf
 
 @Injectable()
 export class UsersService implements IUsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @Inject(IUSERS_REPOSITORY)
     private readonly repository: IUsersRepository,
@@ -75,7 +78,14 @@ export class UsersService implements IUsersService {
     }
     const user = await this.repository.createClient(dto);
     // Enviar el mail de bienvenida en segundo plano, sin bloquear el registro
-    this.sendWelcomeEmail(dto.email, dto.firstName, dto.lastName);
+    this.sendWelcomeEmail(dto.email, dto.firstName, dto.lastName).catch(
+      (error) => {
+        this.logger.error(
+          `Error enviando email de bienvenida a ${dto.email}:`,
+          error,
+        );
+      },
+    );
     return this.sanitize(user);
   }
 
@@ -341,33 +351,28 @@ export class UsersService implements IUsersService {
     firstName: string,
     lastName: string,
   ): Promise<void> {
-    try {
-      await this.mailerService.sendMail(
-        email,
-        'Bienvenido al Sistema de Gestión de Reclamos',
-        `<h2>Bienvenido al Sistema de Gestión de Reclamos</h2>
-        <p>Estimado/a ${firstName} ${lastName},</p>
-        <p>Tu cuenta ha sido creada exitosamente como usuario cliente.</p>
-        <p><strong>Detalles de tu cuenta:</strong></p>
-        <ul>
-          <li><strong>Nombre:</strong> ${firstName} ${lastName}</li>
-          <li><strong>Email:</strong> ${email}</li>
-        </ul>
-        <p><strong>Instrucciones para el primer ingreso:</strong></p>
-        <ol>
-          <li>Accedé al sistema utilizando tu correo electrónico: <strong>${email}</strong></li>
-          <li>Ingresá la contraseña que definiste durante el registro</li>
-          <li>Te recomendamos cambiar tu contraseña periódicamente para mayor seguridad</li>
-        </ol>
-        <p>Si tenés alguna duda o inconveniente, podés contactarte con el equipo de soporte.</p>
-        <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>`,
-      );
-    } catch (error) {
-      // No interrumpimos el flujo de registro si el mail falla
-      // Podrías reemplazar esto por un Logger si lo preferís
-      // eslint-disable-next-line no-console
-      console.error('Error enviando email de bienvenida:', error);
-    }
+    this.logger.log(`Enviando email de bienvenida a ${email}`);
+    await this.mailerService.sendMail(
+      email,
+      'Bienvenido al Sistema de Gestión de Reclamos',
+      `<h2>Bienvenido al Sistema de Gestión de Reclamos</h2>
+      <p>Estimado/a ${firstName} ${lastName},</p>
+      <p>Tu cuenta ha sido creada exitosamente como usuario cliente.</p>
+      <p><strong>Detalles de tu cuenta:</strong></p>
+      <ul>
+        <li><strong>Nombre:</strong> ${firstName} ${lastName}</li>
+        <li><strong>Email:</strong> ${email}</li>
+      </ul>
+      <p><strong>Instrucciones para el primer ingreso:</strong></p>
+      <ol>
+        <li>Accedé al sistema utilizando tu correo electrónico: <strong>${email}</strong></li>
+        <li>Ingresá la contraseña que definiste durante el registro</li>
+        <li>Te recomendamos cambiar tu contraseña periódicamente para mayor seguridad</li>
+      </ol>
+      <p>Si tenés alguna duda o inconveniente, podés contactarte con el equipo de soporte.</p>
+      <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>`,
+    );
+    this.logger.log(`Email de bienvenida enviado exitosamente a ${email}`);
   }
 
   async sendTwoFactorEmail(email: string, code: string): Promise<void> {
