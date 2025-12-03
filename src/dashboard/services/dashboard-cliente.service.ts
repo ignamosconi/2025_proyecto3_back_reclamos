@@ -91,68 +91,38 @@ export class DashboardClienteService implements IDashboardClienteService {
     }));
 
     // 3. Average resolution time (from creation to final state)
-    // For final states, we can use updatedAt as a fallback if historial is not available
+    // For final states, use updatedAt which reflects when the state was changed to final
     const finalStates = [EstadoReclamo.RESUELTO, EstadoReclamo.RECHAZADO];
+    
     const resolutionTimeAgg = await this.reclamoModel.aggregate([
       {
         $match: {
           ...baseMatch,
           estado: { $in: finalStates },
-        },
-      },
-      {
-        $lookup: {
-          from: 'historiales',
-          localField: '_id',
-          foreignField: 'reclamoId',
-          as: 'historial',
+          updatedAt: { $exists: true, $ne: null },
+          createdAt: { $exists: true, $ne: null },
         },
       },
       {
         $addFields: {
-          resolvedAt: {
-            $let: {
-              vars: {
-                estadoChange: {
-                  $arrayElemAt: [
-                    {
-                      $filter: {
-                        input: '$historial',
-                        as: 'h',
-                        cond: {
-                          $and: [
-                            { $eq: ['$$h.accion', 'modificar-estado-reclamo'] },
-                            { $in: ['$$h.metadata.estado_actual', finalStates] },
-                          ],
-                        },
-                      },
-                    },
-                    0,
-                  ],
-                },
-              },
-              in: {
-                $ifNull: ['$$estadoChange.fecha_hora', '$updatedAt'],
-              },
-            },
+          resolutionDays: {
+            $divide: [
+              { $subtract: ['$updatedAt', '$createdAt'] },
+              1000 * 60 * 60 * 24, // Convert milliseconds to days
+            ],
           },
         },
       },
       {
         $match: {
-          resolvedAt: { $exists: true, $ne: null },
+          resolutionDays: { $gt: 0 }, // Only positive values
         },
       },
       {
         $group: {
           _id: null,
           totalDays: {
-            $sum: {
-              $divide: [
-                { $subtract: ['$resolvedAt', '$createdAt'] },
-                1000 * 60 * 60 * 24, // Convert milliseconds to days
-              ],
-            },
+            $sum: '$resolutionDays',
           },
           count: { $sum: 1 },
         },
@@ -162,6 +132,9 @@ export class DashboardClienteService implements IDashboardClienteService {
     let averageResolutionTime = 0;
     if (resolutionTimeAgg.length > 0 && resolutionTimeAgg[0].count > 0) {
       averageResolutionTime = resolutionTimeAgg[0].totalDays / resolutionTimeAgg[0].count;
+      this.logger.debug(`Resolution time calculated: ${averageResolutionTime.toFixed(2)} days from ${resolutionTimeAgg[0].count} claims`);
+    } else {
+      this.logger.debug(`No resolution time data found. Claims in final states: ${JSON.stringify(resolutionTimeAgg)}`);
     }
 
     // Total claims count
