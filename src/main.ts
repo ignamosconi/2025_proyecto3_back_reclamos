@@ -46,6 +46,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, document); // La documentación va a estar en: /api/docs
 
-  await app.listen(3000);
+  await app.listen(configService.get<number>('PORT', 3000));
 }
 bootstrap();
