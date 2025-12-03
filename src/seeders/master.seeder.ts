@@ -19,10 +19,13 @@ import { HistorialReclamosSeeder } from './historial-reclamos.seeder';
 import { EncuestaSeeder } from './encuesta.seeder';
 import { SintesisSeeder } from './sintesis.seeder';
 import { ComentarioSeeder } from './comentario.seeder';
+import { ReclamoEncargadoSeeder } from './reclamo-encargado.seeder';
+import { ImagenSeeder } from './imagen.seeder';
 import { HistorialRepository } from '../historial/historial.repository';
 import { IENCUESTA_REPOSITORY } from '../encuesta/repositories/interfaces/encuesta.repository.interface';
 import { ISINTESIS_REPOSITORY } from '../sintesis/repositories/interfaces/sintesis.repository.interface';
 import { ICOMENTARIO_REPOSITORY } from '../comentario/repositories/interfaces/comentario.repository.interface';
+import { IImagenRepository } from '../reclamo/repositories/interfaces/imagen.repository.interface';
 
 async function runSeeders() {
   console.log('Iniciando seeders con repositories...');
@@ -50,7 +53,16 @@ async function runSeeders() {
   const comentarioRepo = app.get(ICOMENTARIO_REPOSITORY);
 
   await new ReclamosSeeder(reclamoRepo, proyectosRepo, usersRepo, tipoRepo).run();
-  await new HistorialReclamosSeeder(historialRepo, reclamoRepo).run();
+  
+  // Nuevos seeders de relaciones
+  const reclamoEncargadoRepo = app.get('IReclamoEncargadoRepository');
+  const imagenRepo = app.get(IImagenRepository);
+  
+  await new ReclamoEncargadoSeeder(reclamoEncargadoRepo, reclamoRepo, usersRepo).run();
+  await new HistorialReclamosSeeder(historialRepo, reclamoRepo, reclamoEncargadoRepo).run();
+  await new ImagenSeeder(imagenRepo, reclamoRepo).run();
+  
+  // Seeders de contenido relacionado
   await new EncuestaSeeder(encuestaRepo, reclamoRepo, usersRepo).run();
   await new SintesisSeeder(sintesisRepo, reclamoRepo, usersRepo).run();
   await new ComentarioSeeder(comentarioRepo, reclamoRepo, usersRepo).run();
