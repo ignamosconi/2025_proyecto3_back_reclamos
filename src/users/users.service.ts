@@ -262,4 +262,9 @@ export class UsersService implements IUsersService {
       <a href="${resetLink}">${resetLink}</a>`,
     );
   }
+
+  async findEncargadosByArea(areaId: string): Promise<Omit<UserDocument, 'password'>[]> {
+    const encargados = await this.repository.findEncargadosByArea(areaId);
+    return encargados.map(e => this.sanitize(e));
+  }
 }

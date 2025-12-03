@@ -175,4 +175,18 @@ export class UsersController implements IUsersController {
     console.log(`[UsersController] PATCH /users/${userId}/restore - Restaurando usuario`);
     return this.service.restore(userId);
   }
+
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO, UserRole.GERENTE)
+  @Get('encargados/area/:areaId')
+  @ApiOperation({ summary: 'Obtener encargados de un área' })
+  @ApiParam({ name: 'areaId', type: String, description: 'ID del área' })
+  @ApiResponse({ status: 200, description: 'Encargados del área', type: [UserResponseDto] })
+  findEncargadosByArea(
+    @Param('areaId', ParseObjectIdPipe) areaId: string
+  ): Promise<Omit<UserDocument, 'password'>[]> {
+    console.log(`[UsersController] GET /users/encargados/area/${areaId} - Obteniendo encargados del área`);
+    return this.service.findEncargadosByArea(areaId);
+  }
 }

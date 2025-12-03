@@ -35,11 +35,14 @@ import { GetReclamoQueryDto } from '../dto/get-reclamo-query.dto';
 import { PaginatedReclamoResponseDto } from '../dto/pag-reclamo-response.dto';
 import { ReclamoResponseDto } from '../dto/reclamo-response.dto';
 import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
+import { AddEncargadoDto } from '../dto/add-encargado.dto';
+import { RemoveEncargadoDto } from '../dto/remove-encargado.dto';
 import { ChangeStateDto } from '../dto/change-state.dto';
 import { UpdateImagenDto } from '../dto/update-imagen.dto';
 import { IReclamoController } from './interfaces/reclamo.controller.interface';
 import type { IReclamoService } from '../service/interfaces/reclamo.service.interface';
 import type { IImagenService } from '../service/interfaces/imagen.service.interface';
+import { ReclamoEncargadoService } from '../service/reclamo-encargado.service';
 import { ParseObjectIdPipe } from 'src/common/pipes/objectId.pipe';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
@@ -57,6 +60,7 @@ export class ReclamoController implements IReclamoController {
     private readonly reclamoService: IReclamoService,
     @Inject('IImagenService')
     private readonly imagenService: IImagenService,
+    private readonly reclamoEncargadoService: ReclamoEncargadoService,
   ) { }
 
   // ==================================================================
@@ -291,5 +295,73 @@ export class ReclamoController implements IReclamoController {
     const actorId = String((req.user as any)._id);
     const updated = await this.imagenService.update(id, imagenId, data, actorId);
     return (updated as any).toObject ? (updated as any).toObject() : updated;
+  }
+
+  // ==================================================================
+  // US 12: GESTIÓN DE ENCARGADOS ADICIONALES
+  // ==================================================================
+
+  @Post(':id/encargados')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ 
+    summary: 'Añadir un encargado adicional al reclamo (US 12)',
+    description: 'Solo el encargado principal puede añadir otros encargados del mismo área. El reclamo debe estar en revisión.'
+  })
+  @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
+  @ApiBody({ type: AddEncargadoDto })
+  @ApiResponse({ 
+    status: HttpStatus.CREATED, 
+    description: 'Encargado añadido exitosamente al reclamo.' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.FORBIDDEN, 
+    description: 'Solo el encargado principal puede añadir encargados.' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.BAD_REQUEST, 
+    description: 'El encargado debe pertenecer a la misma área o el reclamo no está en revisión.' 
+  })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO)
+  async addEncargado(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() data: AddEncargadoDto,
+    @Req() req: RequestWithUser,
+  ): Promise<{ message: string }> {
+    const actorId = String((req.user as any)._id);
+    await this.reclamoEncargadoService.addEncargado(id, actorId, data);
+    return { message: 'Encargado añadido exitosamente al reclamo' };
+  }
+
+  @Delete(':id/encargados')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ 
+    summary: 'Eliminar un encargado del reclamo (US 12)',
+    description: 'Solo el encargado principal puede eliminar otros encargados. Siempre debe quedar al menos un encargado.'
+  })
+  @ApiParam({ name: 'id', description: 'ID del reclamo', type: 'string' })
+  @ApiBody({ type: RemoveEncargadoDto })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: 'Encargado eliminado exitosamente del reclamo.' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.FORBIDDEN, 
+    description: 'Solo el encargado principal puede eliminar encargados.' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.BAD_REQUEST, 
+    description: 'No se puede eliminar el último encargado o el encargado principal no puede eliminarse a sí mismo.' 
+  })
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(UserRole.ENCARGADO)
+  async removeEncargado(
+    @Param('id', ParseObjectIdPipe) id: string,
+    @Body() data: RemoveEncargadoDto,
+    @Req() req: RequestWithUser,
+  ): Promise<{ message: string }> {
+    const actorId = String((req.user as any)._id);
+    await this.reclamoEncargadoService.removeEncargado(id, actorId, data);
+    return { message: 'Encargado eliminado exitosamente del reclamo' };
   }
 }

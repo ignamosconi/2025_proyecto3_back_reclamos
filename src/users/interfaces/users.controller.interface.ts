@@ -19,4 +19,5 @@ export interface IUsersController {
   findById(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
   softDelete(userId: string, dto: DeleteUserDto): Promise<Omit<UserDocument, 'password'> | null>;
   restore(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
+  findEncargadosByArea(areaId: string): Promise<Omit<UserDocument, 'password'>[]>;
 }

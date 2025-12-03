@@ -17,7 +17,8 @@ export interface IUsersRepository {
 
   softDelete(id: string): Promise<UserDocument | null>;
   restore(id: string): Promise<UserDocument | null>;
-  findByResetToken(token: string): Promise<UserDocument | null>
+  findByResetToken(token: string): Promise<UserDocument | null>;
+  findEncargadosByArea(areaId: string): Promise<UserDocument[]>;
 
   /*
     FUNCIÓN UPDATE 

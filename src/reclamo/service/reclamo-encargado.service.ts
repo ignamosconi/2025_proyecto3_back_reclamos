@@ -1,14 +1,17 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import type { IReclamoEncargadoRepository } from '../repositories/interfaces/reclamo-encargado.repository.interface';
 import type { IReclamoRepository } from '../repositories/interfaces/reclamo.repository.interface';
 import { Reclamo } from '../schemas/reclamo.schema';
 import { EstadoReclamo } from '../enums/estado.enum';
 import { UpdateEncargadosDto } from '../dto/update-encargados.dto';
+import { AddEncargadoDto } from '../dto/add-encargado.dto';
+import { RemoveEncargadoDto } from '../dto/remove-encargado.dto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from '../../users/schemas/user.schema';
 import { HistorialService } from 'src/historial/historial.service';
 import { AccionesHistorial } from '../../historial/helpers/acciones-historial.enum';
+import { UserRole } from '../../users/helpers/enum.roles';
 
 @Injectable()
 export class ReclamoEncargadoService {
@@ -37,10 +40,35 @@ export class ReclamoEncargadoService {
     const encargado = await this.userModel.findById(encargadoId).exec();
     if (!encargado) throw new NotFoundException('Usuario encargado no encontrado');
 
-    // Evitar duplicados
+    // Verificar si ya está asignado
     const already = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, encargadoId);
-    if (!already) {
-      await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId);
+    
+    if (already) {
+      // Si ya estaba asignado, verificar si ya es principal
+      const principalExistente = await this.reclamoEncargadoRepository.findPrincipalEncargado(reclamoId);
+      
+      if (principalExistente) {
+        const principalId = principalExistente.fkEncargado && (principalExistente.fkEncargado as any)._id
+          ? String((principalExistente.fkEncargado as any)._id)
+          : String(principalExistente.fkEncargado);
+        
+        if (principalId !== encargadoId) {
+          throw new BadRequestException('Este reclamo ya tiene un encargado principal. No puedes autoasignarte.');
+        }
+        // Si ya es el principal, no hacemos nada más
+      } else {
+        // Si estaba asignado pero no hay principal, eliminamos y reasignamos como principal
+        await this.reclamoEncargadoRepository.unassignEncargado(reclamoId, encargadoId);
+        await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId, true);
+      }
+    } else {
+      // Si no estaba asignado, verificar que no haya otro principal
+      const principalExistente = await this.reclamoEncargadoRepository.findPrincipalEncargado(reclamoId);
+      if (principalExistente) {
+        throw new BadRequestException('Este reclamo ya tiene un encargado principal. No puedes autoasignarte.');
+      }
+      // Asignar como principal
+      await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId, true);
     }
 
     // Poner el reclamo en EN_REVISION si aún no lo está
@@ -153,6 +181,146 @@ export class ReclamoEncargadoService {
     if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
 
     const encargados = await this.reclamoEncargadoRepository.findEncargadosByReclamo(reclamoId);
-    return encargados.map(e => e.fkEncargado);
+    // Retornar el objeto completo con isPrincipal incluido
+    return encargados.map(e => {
+      const encargadoObj = e.toObject ? e.toObject() : e;
+      return {
+        _id: encargadoObj._id,
+        fkEncargado: encargadoObj.fkEncargado,
+        fkReclamo: encargadoObj.fkReclamo,
+        isPrincipal: encargadoObj.isPrincipal,
+        createdAt: encargadoObj.createdAt,
+        updatedAt: encargadoObj.updatedAt,
+      };
+    });
+  }
+
+  /**
+   * US 12: Añadir un encargado adicional al reclamo
+   * Cualquier encargado asignado puede agregar otros encargados
+   * Los encargados añadidos deben pertenecer a la misma área que el reclamo
+   */
+  async addEncargado(reclamoId: string, actorId: string, data: AddEncargadoDto): Promise<void> {
+    const { encargadoId } = data;
+
+    // 1. Validar existencia del reclamo
+    const reclamo = await this.reclamoRepository.findById(reclamoId, true);
+    if (!reclamo) {
+      throw new NotFoundException('Reclamo no encontrado');
+    }
+
+    // 2. Validar que el reclamo esté en revisión
+    if (reclamo.estado !== EstadoReclamo.EN_REVISION) {
+      throw new BadRequestException('Solo se pueden agregar encargados a reclamos en revisión');
+    }
+
+    // 3. Validar que el actor esté asignado al reclamo
+    const actorIsAssigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, actorId);
+    if (!actorIsAssigned) {
+      throw new ForbiddenException('Solo los encargados asignados pueden agregar otros encargados a este reclamo');
+    }
+
+    // 4. Validar que el nuevo encargado no sea el mismo que el actor
+    if (encargadoId === actorId) {
+      throw new BadRequestException('No puedes añadirte a ti mismo como encargado adicional');
+    }
+
+    // 5. Validar existencia del nuevo encargado
+    const nuevoEncargado = await this.userModel.findById(encargadoId).populate('areas').exec();
+    if (!nuevoEncargado) {
+      throw new NotFoundException('Usuario encargado no encontrado');
+    }
+
+    // 6. Validar que sea un encargado
+    if (nuevoEncargado.role !== UserRole.ENCARGADO) {
+      throw new BadRequestException('El usuario debe tener rol de Encargado');
+    }
+
+    // 7. Validar que el encargado pertenezca al área del reclamo
+    const reclamoAreaId = reclamo.fkArea && (reclamo.fkArea as any)._id
+      ? String((reclamo.fkArea as any)._id)
+      : String(reclamo.fkArea);
+
+    const encargadoAreas = nuevoEncargado.areas.map((area: any) =>
+      area && area._id ? String(area._id) : String(area)
+    );
+
+    if (!encargadoAreas.includes(reclamoAreaId)) {
+      throw new BadRequestException('El encargado debe pertenecer a la misma área que el reclamo');
+    }
+
+    // 8. Validar que no esté ya asignado
+    const alreadyAssigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, encargadoId);
+    if (alreadyAssigned) {
+      throw new BadRequestException('Este encargado ya está asignado al reclamo');
+    }
+
+    // 9. Asignar el encargado
+    await this.reclamoEncargadoRepository.assignEncargado(reclamoId, encargadoId, false);
+
+    // 10. Registrar en el historial
+    await this.historialService.create(
+      reclamoId,
+      AccionesHistorial.AGREGAR_ENCARGADO,
+      `Encargado ${nuevoEncargado.firstName} ${nuevoEncargado.lastName} añadido al reclamo`,
+      actorId,
+      { encargado_agregado: encargadoId }
+    );
+  }
+
+  /**
+   * US 12: Eliminar un encargado del reclamo
+   * Cualquier encargado asignado puede eliminar encargados (incluso a sí mismo)
+   * Siempre debe quedar al menos un encargado
+   */
+  async removeEncargado(reclamoId: string, actorId: string, data: RemoveEncargadoDto): Promise<void> {
+    const { encargadoId } = data;
+
+    // 1. Validar existencia del reclamo
+    const reclamo = await this.reclamoRepository.findById(reclamoId, false);
+    if (!reclamo) {
+      throw new NotFoundException('Reclamo no encontrado');
+    }
+
+    // 2. Validar que el reclamo esté en revisión
+    if (reclamo.estado !== EstadoReclamo.EN_REVISION) {
+      throw new BadRequestException('Solo se pueden eliminar encargados de reclamos en revisión');
+    }
+
+    // 3. Validar que el actor esté asignado al reclamo
+    const actorIsAssigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, actorId);
+    if (!actorIsAssigned) {
+      throw new ForbiddenException('Solo los encargados asignados pueden eliminar encargados de este reclamo');
+    }
+
+    // 4. Validar que el encargado a eliminar esté asignado
+    const isAssigned = await this.reclamoEncargadoRepository.isEncargadoAssigned(reclamoId, encargadoId);
+    if (!isAssigned) {
+      throw new NotFoundException('Este encargado no está asignado al reclamo');
+    }
+
+    // 5. Contar encargados actuales - debe quedar al menos uno
+    const currentCount = await this.reclamoEncargadoRepository.countEncargadosByReclamo(reclamoId);
+    if (currentCount <= 1) {
+      throw new BadRequestException('No se puede eliminar el último encargado del reclamo. Debe quedar al menos uno.');
+    }
+
+    // 6. Obtener datos del encargado para el historial
+    const encargadoEliminado = await this.userModel.findById(encargadoId).exec();
+    const nombreEncargado = encargadoEliminado 
+      ? `${encargadoEliminado.firstName} ${encargadoEliminado.lastName}`
+      : 'Encargado';
+
+    // 7. Eliminar la asignación
+    await this.reclamoEncargadoRepository.unassignEncargado(reclamoId, encargadoId);
+
+    // 8. Registrar en el historial
+    await this.historialService.create(
+      reclamoId,
+      AccionesHistorial.ELIMINAR_ENCARGADO,
+      `Encargado ${nombreEncargado} eliminado del reclamo`,
+      actorId,
+      { encargado_eliminado: encargadoId }
+    );
   }
 }

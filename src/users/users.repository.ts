@@ -137,4 +137,15 @@ export class UsersRepository implements IUsersRepository {
       );
     }
   }
+
+  async findEncargadosByArea(areaId: string): Promise<UserDocument[]> {
+    return this.model
+      .find({
+        role: 'Encargado',
+        areas: new Types.ObjectId(areaId),
+        deletedAt: null,
+      })
+      .populate('areas')
+      .exec();
+  }
 }

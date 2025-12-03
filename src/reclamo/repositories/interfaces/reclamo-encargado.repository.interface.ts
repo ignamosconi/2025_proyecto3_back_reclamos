@@ -4,7 +4,7 @@ export interface IReclamoEncargadoRepository {
   /**
    * Crea el vínculo entre un reclamo y un encargado.
    */
-  assignEncargado(reclamoId: string, encargadoId: string): Promise<ReclamoEncargado>;
+  assignEncargado(reclamoId: string, encargadoId: string, isPrincipal?: boolean): Promise<ReclamoEncargado>;
 
   /**
    * Elimina el vínculo entre un reclamo y un encargado específico.
@@ -35,6 +35,11 @@ export interface IReclamoEncargadoRepository {
    * Obtiene la lista de encargados asignados con sus datos poblados.
    */
   findEncargadosByReclamo(reclamoId: string): Promise<ReclamoEncargado[]>;
+
+  /**
+   * Obtiene el encargado principal (autoasignado) de un reclamo.
+   */
+  findPrincipalEncargado(reclamoId: string): Promise<ReclamoEncargado | null>;
 }
 
 export const IReclamoEncargadoRepository = Symbol('IReclamoEncargadoRepository');

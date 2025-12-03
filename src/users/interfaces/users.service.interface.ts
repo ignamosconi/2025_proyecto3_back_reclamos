@@ -17,6 +17,7 @@ export interface IUsersService {
   findById(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
   softDelete(userId: string, emailConfirmation: string): Promise<Omit<UserDocument, 'password'> | null>;
   restore(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
+  findEncargadosByArea(areaId: string): Promise<Omit<UserDocument, 'password'>[]>;
 
   
   setResetPasswordToken(userId: string, token: string, expires: Date): Promise<void>;
