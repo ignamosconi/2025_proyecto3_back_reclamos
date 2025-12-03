@@ -1,4 +1,9 @@
-import { Injectable, Inject, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { IUsersService } from './interfaces/users.service.interface';
 import type { IUsersRepository } from './interfaces/users.repository.interface';
 import { IUSERS_REPOSITORY } from './interfaces/users.repository.interface';
@@ -19,9 +24,9 @@ import type { IMailerService } from 'src/mailer/interfaces/mailer.service.interf
 @Injectable()
 export class UsersService implements IUsersService {
   constructor(
-    @Inject(IUSERS_REPOSITORY) 
+    @Inject(IUSERS_REPOSITORY)
     private readonly repository: IUsersRepository,
-    
+
     @InjectModel('Area')
     private readonly areaModel: Model<Area>,
 
@@ -44,16 +49,23 @@ export class UsersService implements IUsersService {
   private sanitizePagination(response: PaginationResponseUserDto) {
     return {
       ...response,
-      data: response.data.map(u => this.sanitize(u)),
+      data: response.data.map((u) => this.sanitize(u)),
     };
   }
 
-  async registerClient(dto: CreateClientDto): Promise<Omit<UserDocument, 'password'>> {
+  async registerClient(
+    dto: CreateClientDto,
+  ): Promise<Omit<UserDocument, 'password'>> {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
 
     // Validar fuerza de la contraseña principal
-    validatePasswordStrength(dto.password, dto.email, dto.firstName, dto.lastName);
+    validatePasswordStrength(
+      dto.password,
+      dto.email,
+      dto.firstName,
+      dto.lastName,
+    );
 
     // Validar que coincida con passwordConfirmation
     if (dto.password !== dto.passwordConfirmation) {
@@ -67,11 +79,18 @@ export class UsersService implements IUsersService {
     return this.sanitize(user);
   }
 
-  async createStaff(dto: CreateStaffDto): Promise<Omit<UserDocument, 'password'>> {
+  async createStaff(
+    dto: CreateStaffDto,
+  ): Promise<Omit<UserDocument, 'password'>> {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
 
-    validatePasswordStrength(dto.password, dto.email, dto.firstName, dto.lastName);
+    validatePasswordStrength(
+      dto.password,
+      dto.email,
+      dto.firstName,
+      dto.lastName,
+    );
 
     if (dto.password !== dto.passwordConfirmation) {
       throw new BadRequestException({
@@ -83,19 +102,20 @@ export class UsersService implements IUsersService {
     // Validar que las áreas existan
     for (const areaId of dto.areaIds) {
       const exists = await this.areaModel.findById(areaId);
-      if (!exists) throw new BadRequestException(`Área no encontrada: ${areaId}`);
+      if (!exists)
+        throw new BadRequestException(`Área no encontrada: ${areaId}`);
     }
 
     const user = await this.repository.createStaff(dto);
-    
+
     // Enviar correo de bienvenida
     const areasNames = await Promise.all(
       dto.areaIds.map(async (areaId) => {
         const area = await this.areaModel.findById(areaId);
         return area ? area.nombre : '';
-      })
+      }),
     );
-    
+
     const welcomeMessage = `
       <h2>Bienvenido al Sistema de Gestión de Reclamos</h2>
       <p>Estimado/a ${dto.firstName} ${dto.lastName},</p>
@@ -104,7 +124,7 @@ export class UsersService implements IUsersService {
       <ul>
         <li><strong>Rol:</strong> ${dto.role}</li>
         <li><strong>Email:</strong> ${dto.email}</li>
-        <li><strong>Áreas Responsables:</strong> ${areasNames.filter(n => n).join(', ') || 'Sin áreas asignadas'}</li>
+        <li><strong>Áreas Responsables:</strong> ${areasNames.filter((n) => n).join(', ') || 'Sin áreas asignadas'}</li>
       </ul>
       <p><strong>Instrucciones para el primer inicio de sesión:</strong></p>
       <ol>
@@ -115,23 +135,34 @@ export class UsersService implements IUsersService {
       <p>Si tiene alguna pregunta o necesita asistencia, no dude en contactarnos.</p>
       <p>Saludos cordiales,<br>Equipo de Gestión de Reclamos</p>
     `;
-    
+
     this.mailerService.sendMail(
       dto.email,
       'Bienvenido al Sistema de Gestión de Reclamos',
       welcomeMessage,
     );
-    
+
     return this.sanitize(user);
   }
 
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<Omit<UserDocument, 'password'> | null> {
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     const existing = await this.repository.findRawById(userId);
     if (!existing) throw new BadRequestException('Usuario no encontrado');
-    if (existing.deletedAt) throw new BadRequestException('No se puede modificar un usuario eliminado');
+    if (existing.deletedAt)
+      throw new BadRequestException(
+        'No se puede modificar un usuario eliminado',
+      );
 
     if (dto.password) {
-      validatePasswordStrength(dto.password, existing.email, existing.firstName, existing.lastName);
+      validatePasswordStrength(
+        dto.password,
+        existing.email,
+        existing.firstName,
+        existing.lastName,
+      );
 
       if (dto.password !== dto.passwordConfirmation) {
         throw new BadRequestException({
@@ -143,41 +174,57 @@ export class UsersService implements IUsersService {
 
     if (dto.email && dto.email !== existing.email) {
       const emailTaken = await this.repository.findByEmail(dto.email);
-      if (emailTaken) throw new ConflictException('El email ya está registrado');
+      if (emailTaken)
+        throw new ConflictException('El email ya está registrado');
     }
 
     const updated = await this.repository.update(userId, dto);
     return this.sanitize(updated);
   }
 
-  async updateStaff(userId: string, dto: UpdateStaffDto): Promise<Omit<UserDocument, 'password'> | null> {
+  async updateStaff(
+    userId: string,
+    dto: UpdateStaffDto,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     delete dto.passwordConfirmation;
 
     const existing = await this.repository.findRawById(userId);
     if (!existing) throw new BadRequestException('Usuario no encontrado');
-    if (existing.deletedAt) throw new BadRequestException('No se puede modificar un usuario eliminado');
+    if (existing.deletedAt)
+      throw new BadRequestException(
+        'No se puede modificar un usuario eliminado',
+      );
 
     if (dto.password) {
-      validatePasswordStrength(dto.password, existing.email, existing.firstName, existing.lastName);
+      validatePasswordStrength(
+        dto.password,
+        existing.email,
+        existing.firstName,
+        existing.lastName,
+      );
     }
 
     if (dto.areaIds) {
       if (dto.areaIds.length === 0) {
-        throw new BadRequestException('Un staff debe tener al menos un área asignada');
+        throw new BadRequestException(
+          'Un staff debe tener al menos un área asignada',
+        );
       }
 
-    for (const areaId of dto.areaIds) {
-      if (!Types.ObjectId.isValid(areaId)) {
-        throw new BadRequestException(`Área inválida: ${areaId}`);
+      for (const areaId of dto.areaIds) {
+        if (!Types.ObjectId.isValid(areaId)) {
+          throw new BadRequestException(`Área inválida: ${areaId}`);
+        }
+        const exists = await this.areaModel.findById(areaId);
+        if (!exists)
+          throw new BadRequestException(`Área no encontrada: ${areaId}`);
       }
-      const exists = await this.areaModel.findById(areaId);
-      if (!exists) throw new BadRequestException(`Área no encontrada: ${areaId}`);
-    }
     }
 
     if (dto.email && dto.email !== existing.email) {
       const emailTaken = await this.repository.findByEmail(dto.email);
-      if (emailTaken) throw new ConflictException('El email ya está registrado');
+      if (emailTaken)
+        throw new ConflictException('El email ya está registrado');
     }
 
     const updated = await this.repository.update(userId, dto);
@@ -189,7 +236,9 @@ export class UsersService implements IUsersService {
     return this.sanitizePagination(response);
   }
 
-  async findDeleted(query: GetUsersQueryDto): Promise<PaginationResponseUserDto> {
+  async findDeleted(
+    query: GetUsersQueryDto,
+  ): Promise<PaginationResponseUserDto> {
     const response = await this.repository.findDeleted(query);
     return this.sanitizePagination(response);
   }
@@ -199,30 +248,43 @@ export class UsersService implements IUsersService {
     return await this.repository.findByEmail(email);
   }
 
-  async findById(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
+  async findById(
+    userId: string,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     const user = await this.repository.findRawById(userId);
     return this.sanitize(user);
   }
 
-  async softDelete(userId: string, emailConfirmation: string): Promise<Omit<UserDocument, 'password'> | null> {
+  async softDelete(
+    userId: string,
+    emailConfirmation: string,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     const user = await this.repository.findRawById(userId);
-    if (!user) throw new BadRequestException(`Usuario con id ${userId} no existe`);
-    if (user.deletedAt) throw new BadRequestException('El usuario ya está eliminado');
-    
+    if (!user)
+      throw new BadRequestException(`Usuario con id ${userId} no existe`);
+    if (user.deletedAt)
+      throw new BadRequestException('El usuario ya está eliminado');
+
     // Validar que el email de confirmación coincida con el email del usuario
     if (user.email.toLowerCase() !== emailConfirmation.toLowerCase()) {
-      throw new BadRequestException('El email de confirmación no coincide con el email del usuario');
+      throw new BadRequestException(
+        'El email de confirmación no coincide con el email del usuario',
+      );
     }
-    
+
     const deletedUser = await this.repository.softDelete(userId);
     return this.sanitize(deletedUser);
   }
 
-  async restore(userId: string): Promise<Omit<UserDocument, 'password'> | null> {
+  async restore(
+    userId: string,
+  ): Promise<Omit<UserDocument, 'password'> | null> {
     const user = await this.repository.findRawById(userId);
 
-    if (!user) throw new BadRequestException(`Usuario con id ${userId} no existe`);
-    if (!user.deletedAt) throw new BadRequestException('El usuario no está eliminado');
+    if (!user)
+      throw new BadRequestException(`Usuario con id ${userId} no existe`);
+    if (!user.deletedAt)
+      throw new BadRequestException('El usuario no está eliminado');
 
     const restoredUser = await this.repository.restore(userId);
     return this.sanitize(restoredUser);
@@ -232,7 +294,11 @@ export class UsersService implements IUsersService {
   /*
     RECUPERACIÓN CONTRASEÑA
   */
-  async setResetPasswordToken(userId: string, token: string, expires: Date): Promise<void> {
+  async setResetPasswordToken(
+    userId: string,
+    token: string,
+    expires: Date,
+  ): Promise<void> {
     await this.repository.update(userId, {
       resetPasswordToken: token,
       resetPasswordExpires: expires,
@@ -263,8 +329,30 @@ export class UsersService implements IUsersService {
     );
   }
 
-  async findEncargadosByArea(areaId: string): Promise<Omit<UserDocument, 'password'>[]> {
+  async findEncargadosByArea(
+    areaId: string,
+  ): Promise<Omit<UserDocument, 'password'>[]> {
     const encargados = await this.repository.findEncargadosByArea(areaId);
-    return encargados.map(e => this.sanitize(e));
+    return encargados.map((e) => this.sanitize(e));
+  }
+
+  async sendTwoFactorEmail(email: string, code: string): Promise<void> {
+    await this.mailerService.sendMail(
+      email,
+      'Código de verificación 2FA',
+      `<p>Tu código de verificación es: <strong>${code}</strong></p>
+       <p>Este código expirará en 10 minutos.</p>`,
+    );
+  }
+
+  async setTwoFactorCode(
+    userId: string,
+    code: string,
+    expires: Date,
+  ): Promise<void> {
+    await this.repository.update(userId, {
+      twoFactorCode: code,
+      twoFactorCodeExpires: expires,
+    });
   }
 }

@@ -36,6 +36,16 @@ export class User {
 
   @Prop({ type: Date, default: null })
   resetPasswordExpires?: Date | null;
+
+  // 2FA Fields
+  @Prop({ type: Boolean, default: false })
+  activate2fa: boolean;
+
+  @Prop({ type: String, default: null })
+  twoFactorCode?: string | null;
+
+  @Prop({ type: Date, default: null })
+  twoFactorCodeExpires?: Date | null;
 }
 
 export type UserDocument = User & Document;

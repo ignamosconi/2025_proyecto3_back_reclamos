@@ -9,21 +9,41 @@ import { UserDocument } from '../schemas/user.schema';
 export interface IUsersService {
   registerClient(dto: CreateClientDto): Promise<Omit<UserDocument, 'password'>>;
   createStaff(dto: CreateStaffDto): Promise<Omit<UserDocument, 'password'>>;
-  updateProfile(userId: string, dto: UpdateProfileDto): Promise<Omit<UserDocument, 'password'> | null>;
-  updateStaff(userId: string, dto: UpdateStaffDto): Promise<Omit<UserDocument, 'password'> | null>;
+  updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<Omit<UserDocument, 'password'> | null>;
+  updateStaff(
+    userId: string,
+    dto: UpdateStaffDto,
+  ): Promise<Omit<UserDocument, 'password'> | null>;
   findAll(query: GetUsersQueryDto): Promise<PaginationResponseUserDto>;
   findDeleted(query: GetUsersQueryDto): Promise<PaginationResponseUserDto>;
   findByEmail(email: string): Promise<UserDocument | null>;
   findById(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
-  softDelete(userId: string, emailConfirmation: string): Promise<Omit<UserDocument, 'password'> | null>;
+  softDelete(
+    userId: string,
+    emailConfirmation: string,
+  ): Promise<Omit<UserDocument, 'password'> | null>;
   restore(userId: string): Promise<Omit<UserDocument, 'password'> | null>;
-  findEncargadosByArea(areaId: string): Promise<Omit<UserDocument, 'password'>[]>;
+  findEncargadosByArea(
+    areaId: string,
+  ): Promise<Omit<UserDocument, 'password'>[]>;
 
-  
-  setResetPasswordToken(userId: string, token: string, expires: Date): Promise<void>;
+  setResetPasswordToken(
+    userId: string,
+    token: string,
+    expires: Date,
+  ): Promise<void>;
   sendPasswordResetEmail(email: string, resetLink: string): Promise<void>;
   findByResetToken(token: string): Promise<UserDocument | null>;
   updatePassword(userId: string, newPassword: string): Promise<void>;
+  sendTwoFactorEmail(email: string, code: string): Promise<void>;
+  setTwoFactorCode(
+    userId: string,
+    code: string | null,
+    expires: Date | null,
+  ): Promise<void>;
 }
 
 export const IUSERS_SERVICE = 'IUsersService';

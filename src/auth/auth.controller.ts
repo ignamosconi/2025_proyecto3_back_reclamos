@@ -22,14 +22,15 @@ import { Roles } from './decorators/roles.decorator';
 import { UserRole } from 'src/users/helpers/enum.roles';
 import { UserDocument } from 'src/users/schemas/user.schema';
 
-
 @ApiTags('Auth') // Agrupa en Swagger
 @Controller('auth')
 export class AuthController implements IAuthController {
   constructor(private readonly service: AuthService) {}
 
   @Post('login')
-  @ApiOperation({ summary: 'Inicia sesión y obtiene tokens (access + refresh)' })
+  @ApiOperation({
+    summary: 'Inicia sesión y obtiene tokens (access + refresh)',
+  })
   @ApiCreatedResponse({
     description: 'Tokens generados correctamente',
     type: TokenPairDTO,
@@ -38,8 +39,12 @@ export class AuthController implements IAuthController {
     status: 401,
     description: 'Credenciales incorrectas',
   })
-  login(@Body() body: LoginDTO): Promise<TokenPairDTO> {
-    console.log(`[AuthController] POST /auth/login - Iniciando sesión para usuario: ${body.email}`,);
+  login(
+    @Body() body: LoginDTO,
+  ): Promise<TokenPairDTO | { requires2fa: boolean; email: string }> {
+    console.log(
+      `[AuthController] POST /auth/login - Iniciando sesión para usuario: ${body.email}`,
+    );
     return this.service.login(body);
   }
 
@@ -48,7 +53,7 @@ export class AuthController implements IAuthController {
     → Este endpoint NO va protegido con AuthGuard, porque es público (ver summary)
   */
   @Post('tokens')
-    @ApiOperation({
+  @ApiOperation({
     summary: 'Obtiene nuevos tokens usando el refresh token',
   })
   @ApiOkResponse({
@@ -60,7 +65,9 @@ export class AuthController implements IAuthController {
     description: 'Refresh token inválido o expirado',
   })
   tokens(@RefreshToken() token: string) {
-    console.log(`[AuthController] POST /auth/tokens - Renovando tokens con refresh token.`,);
+    console.log(
+      `[AuthController] POST /auth/tokens - Renovando tokens con refresh token.`,
+    );
     return this.service.tokens(token);
   }
 
@@ -69,7 +76,9 @@ export class AuthController implements IAuthController {
   */
   // Endpoint para solicitar recuperación de contraseña
   @Post('forgot-password')
-  @ApiOperation({ summary: 'Solicita el envío de un correo para recuperar contraseña' })
+  @ApiOperation({
+    summary: 'Solicita el envío de un correo para recuperar contraseña',
+  })
   @ApiOkResponse({
     description: 'Correo enviado con éxito',
     schema: {
@@ -89,7 +98,9 @@ export class AuthController implements IAuthController {
 
   // Endpoint para resetear contraseña usando token
   @Post('reset-password')
-  @ApiOperation({ summary: 'Resetea la contraseña usando el token recibido por email' })
+  @ApiOperation({
+    summary: 'Resetea la contraseña usando el token recibido por email',
+  })
   @ApiOkResponse({
     description: 'Contraseña actualizada correctamente',
     schema: {
@@ -101,10 +112,28 @@ export class AuthController implements IAuthController {
     description: 'Token inválido o expirado',
   })
   async resetPassword(@Body() body: ResetPasswordDTO) {
-    console.log(`[AuthController] POST /auth/reset-password - Reseteando contraseña con token.`);
+    console.log(
+      `[AuthController] POST /auth/reset-password - Reseteando contraseña con token.`,
+    );
     return this.service.resetPassword(body.token, body.password);
   }
 
+  @Post('verify-2fa')
+  @ApiOperation({ summary: 'Verifica el código 2FA y devuelve los tokens' })
+  @ApiCreatedResponse({
+    description: 'Tokens generados correctamente',
+    type: TokenPairDTO,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Código inválido o expirado',
+  })
+  async verifyTwoFactor(@Body() body: { email: string; code: string }) {
+    console.log(
+      `[AuthController] POST /auth/verify-2fa - Verificando código para: ${body.email}`,
+    );
+    return this.service.verifyTwoFactor(body.email, body.code);
+  }
 
   /*
     EJEMPLO - SIN DOCUMENTAR
@@ -112,16 +141,23 @@ export class AuthController implements IAuthController {
     Las Requests en sí están explicadas en auth.guard, línea 55+
   */
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Endpoint para pruebas. Devuelve los datos del usuario autenticado' })
+  @ApiOperation({
+    summary:
+      'Endpoint para pruebas. Devuelve los datos del usuario autenticado',
+  })
   @ApiResponse({ status: 200, description: 'Datos del usuario actual' })
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(UserRole.CLIENTE, UserRole.ENCARGADO, UserRole.GERENTE)
   @Get('me')
   async me(@Req() req: RequestWithUser) {
     //No tiene DTO porque es de práctica.
-    console.log(`[AuthController] GET /auth/me - Devolviendo datos del usuario autenticado: ${req.user.email}`);
+    console.log(
+      `[AuthController] GET /auth/me - Devolviendo datos del usuario autenticado: ${req.user.email}`,
+    );
     const userDoc = req.user as UserDocument;
-    const userId = userDoc._id ? userDoc._id.toString() : (userDoc as any).id?.toString() || '';
+    const userId = userDoc._id
+      ? userDoc._id.toString()
+      : (userDoc as any).id?.toString() || '';
     return {
       id: userId,
       _id: userId,
@@ -130,6 +166,7 @@ export class AuthController implements IAuthController {
       lastName: req.user.lastName,
       areas: req.user.areas,
       role: req.user.role,
+      activate2fa: req.user.activate2fa,
     };
   }
 }

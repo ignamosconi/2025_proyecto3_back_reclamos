@@ -24,8 +24,18 @@ export class UpdateProfileDto {
   @MinLength(8)
   password?: string;
 
-  @ApiProperty({ description: 'Confirmación de la contraseña', required: false })
+  @ApiProperty({
+    description: 'Confirmación de la contraseña',
+    required: false,
+  })
   @IsOptional()
   @IsString()
   passwordConfirmation?: string;
+
+  @ApiProperty({
+    description: 'Activar autenticación de dos factores',
+    required: false,
+  })
+  @IsOptional()
+  activate2fa?: boolean;
 }

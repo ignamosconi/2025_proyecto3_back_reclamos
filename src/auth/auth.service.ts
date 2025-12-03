@@ -1,5 +1,10 @@
 //ARCHIVO: auth.service.ts
-import {Inject, Injectable, NotFoundException, UnauthorizedException} from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { LoginDTO } from './dto/login.dto';
 import { TokenPairDTO } from './dto/token-pair.dto';
 import { compareSync } from 'bcrypt';
@@ -25,19 +30,32 @@ export class AuthService implements IAuthService {
     return this.jwtService.refreshToken(token); //Obtenemos nuevos access y/o refresh del jwtService
   }
 
-  async login(body: LoginDTO): Promise<TokenPairDTO> {
+  async login(
+    body: LoginDTO,
+  ): Promise<TokenPairDTO | { requires2fa: boolean; email: string }> {
     const user = await this.usersService.findByEmail(body.email);
-    if (!user)
-      {throw new UnauthorizedException(
+    if (!user) {
+      throw new UnauthorizedException(
         'No se pudo loguear. Correo electrónico inválido.',
-      );}
+      );
+    }
 
     //compareSync nos permite comparar el pswd plano que pasó el usuario con el hasheado de la bd.
     const compareResult = compareSync(body.password, user.password);
-    if (!compareResult)
-      {throw new UnauthorizedException(
+    if (!compareResult) {
+      throw new UnauthorizedException(
         'No se pudo loguear. Contraseña incorrecta.',
-      );}
+      );
+    }
+
+    if (user.activate2fa) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      await this.usersService.setTwoFactorCode(user.id, code, expires);
+      await this.usersService.sendTwoFactorEmail(user.email, code);
+
+      return { requires2fa: true, email: user.email };
+    }
 
     //Si el usuario pasó el logueo, le damos los tokens
     return {
@@ -58,7 +76,9 @@ export class AuthService implements IAuthService {
   */
   async forgotPassword(email: string): Promise<{ message: string }> {
     const user = await this.usersService.findByEmail(email);
-    if (!user) {throw new NotFoundException('Usuario no encontrado.');}
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado.');
+    }
 
     // Generar token aleatorio
     const token = randomBytes(32).toString('hex');
@@ -79,9 +99,14 @@ export class AuthService implements IAuthService {
     return { message: 'Email para restablecer contraseña enviado.' };
   }
 
-  async resetPassword(token: string, newPassword: string ): Promise<{ message: string }> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
     const user = await this.usersService.findByResetToken(token);
-    if (!user) {throw new UnauthorizedException('Token inválido o expirado.');}
+    if (!user) {
+      throw new UnauthorizedException('Token inválido o expirado.');
+    }
 
     if (
       !user.resetPasswordExpires ||
@@ -102,5 +127,35 @@ export class AuthService implements IAuthService {
     await this.usersService.updatePassword(user.id, newPassword);
 
     return { message: 'Contraseña actualizada correctamente.' };
+  }
+
+  async verifyTwoFactor(email: string, code: string): Promise<TokenPairDTO> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado.');
+    }
+
+    if (
+      !user.twoFactorCode ||
+      user.twoFactorCode !== code ||
+      !user.twoFactorCodeExpires ||
+      isAfter(new Date(), user.twoFactorCodeExpires)
+    ) {
+      throw new UnauthorizedException('Código inválido o expirado.');
+    }
+
+    // Limpiar código
+    await this.usersService.setTwoFactorCode(user.id, null, null);
+
+    return {
+      accessToken: this.jwtService.generateToken({
+        email: user.email,
+        role: user.role,
+      }),
+      refreshToken: this.jwtService.generateToken(
+        { email: user.email, role: user.role },
+        'refresh',
+      ),
+    };
   }
 }
