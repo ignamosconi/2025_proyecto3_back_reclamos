@@ -30,30 +30,28 @@ export class MailerService implements IMailerService {
   }
 
   /**
-   * Envía un correo de forma asíncrona sin bloquear la ejecución de la app.
+   * Envía un correo de forma asíncrona.
    */
-  sendMail(to: string, subject: string, html: string): void {
+  async sendMail(to: string, subject: string, html: string): Promise<void> {
     if (!this.transporter) {
       this.logger.warn(`Email no enviado a ${to}: Mailer no configurado.`);
       return;
     }
 
-    // Fire-and-forget: se ejecuta en paralelo
-    (async () => {
-      try {
-        const info = await this.transporter!.sendMail({
-          from: `"Programación Avanzada" <${this.configService.get('MAIL_FROM')}>`,
-          to,
-          subject,
-          html,
-        });
-        this.logger.log(`Email enviado a ${to}: ${info.messageId}`);
-      } catch (error: any) {
-        this.logger.error(
-          `Error al enviar el email a ${to}: ${error.message}`,
-          error.stack,
-        );
-      }
-    })();
+    try {
+      const info = await this.transporter.sendMail({
+        from: `"Programación Avanzada" <${this.configService.get('MAIL_FROM')}>`,
+        to,
+        subject,
+        html,
+      });
+      this.logger.log(`Email enviado a ${to}: ${info.messageId}`);
+    } catch (error: any) {
+      this.logger.error(
+        `Error al enviar el email a ${to}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 }

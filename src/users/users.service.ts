@@ -74,29 +74,7 @@ export class UsersService implements IUsersService {
       });
     }
     const user = await this.repository.createClient(dto);
-    const welcomeMessage = `
-      <h2>Bienvenido al Sistema de Gestión de Reclamos</h2>
-      <p>Estimado/a ${dto.firstName} ${dto.lastName},</p>
-      <p>Tu cuenta ha sido creada exitosamente como usuario cliente.</p>
-      <p><strong>Detalles de tu cuenta:</strong></p>
-      <ul>
-        <li><strong>Nombre:</strong> ${dto.firstName} ${dto.lastName}</li>
-        <li><strong>Email:</strong> ${dto.email}</li>
-      </ul>
-      <p><strong>Instrucciones para el primer ingreso:</strong></p>
-      <ol>
-        <li>Accedé al sistema utilizando tu correo electrónico: <strong>${dto.email}</strong></li>
-        <li>Ingresá la contraseña que definiste durante el registro</li>
-        <li>Te recomendamos cambiar tu contraseña periódicamente para mayor seguridad</li>
-      </ol>
-      <p>Si tenés alguna duda o inconveniente, podés contactarte con el equipo de soporte.</p>
-      <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>
-    `;
-    this.mailerService.sendMail(
-      dto.email,
-      'Bienvenido al Sistema de Gestión de Reclamos',
-      welcomeMessage,
-    );
+    await this.sendWelcomeEmail(dto.email, dto.firstName, dto.lastName);
     return this.sanitize(user);
   }
 
@@ -157,7 +135,7 @@ export class UsersService implements IUsersService {
       <p>Saludos cordiales,<br>Equipo de Gestión de Reclamos</p>
     `;
 
-    this.mailerService.sendMail(
+    await this.mailerService.sendMail(
       dto.email,
       'Bienvenido al Sistema de Gestión de Reclamos',
       welcomeMessage,
@@ -355,6 +333,33 @@ export class UsersService implements IUsersService {
   ): Promise<Omit<UserDocument, 'password'>[]> {
     const encargados = await this.repository.findEncargadosByArea(areaId);
     return encargados.map((e) => this.sanitize(e));
+  }
+
+  async sendWelcomeEmail(
+    email: string,
+    firstName: string,
+    lastName: string,
+  ): Promise<void> {
+    await this.mailerService.sendMail(
+      email,
+      'Bienvenido al Sistema de Gestión de Reclamos',
+      `<h2>Bienvenido al Sistema de Gestión de Reclamos</h2>
+      <p>Estimado/a ${firstName} ${lastName},</p>
+      <p>Tu cuenta ha sido creada exitosamente como usuario cliente.</p>
+      <p><strong>Detalles de tu cuenta:</strong></p>
+      <ul>
+        <li><strong>Nombre:</strong> ${firstName} ${lastName}</li>
+        <li><strong>Email:</strong> ${email}</li>
+      </ul>
+      <p><strong>Instrucciones para el primer ingreso:</strong></p>
+      <ol>
+        <li>Accedé al sistema utilizando tu correo electrónico: <strong>${email}</strong></li>
+        <li>Ingresá la contraseña que definiste durante el registro</li>
+        <li>Te recomendamos cambiar tu contraseña periódicamente para mayor seguridad</li>
+      </ol>
+      <p>Si tenés alguna duda o inconveniente, podés contactarte con el equipo de soporte.</p>
+      <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>`,
+    );
   }
 
   async sendTwoFactorEmail(email: string, code: string): Promise<void> {
