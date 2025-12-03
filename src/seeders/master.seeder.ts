@@ -5,6 +5,8 @@
 
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
+import { getConnectionToken } from '@nestjs/mongoose';
+import { Connection } from 'mongoose';
 
 import { AreasSeeder } from './areas.seeder';
 import { TipoReclamoSeeder } from './tipo-reclamo.seeder';
@@ -69,6 +71,11 @@ async function runSeeders() {
   console.log('###########################################');
   console.log('Seeders finalizados.');
 
+  // Cerrar la conexión de Mongoose explícitamente
+  const connection = app.get<Connection>(getConnectionToken());
+  await connection.close();
+  
+  // Cerrar el contexto de la aplicación
   await app.close();
 }
 
