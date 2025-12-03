@@ -382,6 +382,11 @@ export class ReclamoService implements IReclamoService {
     const reclamo = await this.reclamoRepository.findById(reclamoId, false);
     if (!reclamo) throw new NotFoundException('Reclamo no encontrado');
 
+    // US 10: No permitir reasignación de área si está en estado final
+    if (reclamo.estado === EstadoReclamo.RESUELTO || reclamo.estado === EstadoReclamo.RECHAZADO) {
+      throw new BadRequestException('No es posible reasignar el área de un reclamo en estado final (Resuelto o Rechazado).');
+    }
+
     const estadoAnterior = reclamo.estado;
 
     // 1. Limpiar encargados

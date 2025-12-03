@@ -36,6 +36,16 @@ export class ReclamoRepository implements IReclamoRepository {
 
       // US 7.b: Poblar imagenes usando el virtual
       query.populate('imagenes');
+
+      // US 10: Poblar síntesis usando el virtual
+      query.populate({
+        path: 'sintesis',
+        populate: [
+          { path: 'fkCreador', select: 'firstName lastName email role' },
+          { path: 'fkArea', select: 'nombre descripcion' }
+        ],
+        options: { sort: { createdAt: -1 } } // Ordenar por más reciente primero
+      });
     }
     // NOTA: Se podría añadir un filtro { deletedAt: null } si se quiere ocultar el soft-deleted por defecto.
     const reclamo = await query.exec();

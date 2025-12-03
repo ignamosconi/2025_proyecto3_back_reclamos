@@ -77,6 +77,12 @@ ReclamoSchema.virtual('encuesta', {
   justOne: true,
 });
 
+ReclamoSchema.virtual('sintesis', {
+  ref: 'Sintesis',
+  localField: '_id',
+  foreignField: 'fkReclamo',
+});
+
 // Asegurar que los virtuales se incluyan al convertir a JSON/Object
 ReclamoSchema.set('toObject', { virtuals: true });
 ReclamoSchema.set('toJSON', { virtuals: true });
