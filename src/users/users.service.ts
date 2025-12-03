@@ -58,7 +58,6 @@ export class UsersService implements IUsersService {
   ): Promise<Omit<UserDocument, 'password'>> {
     if (await this.repository.findByEmail(dto.email))
       throw new ConflictException('El email ya está registrado');
-
     // Validar fuerza de la contraseña principal
     validatePasswordStrength(
       dto.password,
@@ -74,8 +73,30 @@ export class UsersService implements IUsersService {
         errors: ['passwordConfirmation debe ser igual a password'],
       });
     }
-
     const user = await this.repository.createClient(dto);
+    const welcomeMessage = `
+      <h2>Bienvenido al Sistema de Gestión de Reclamos</h2>
+      <p>Estimado/a ${dto.firstName} ${dto.lastName},</p>
+      <p>Tu cuenta ha sido creada exitosamente como usuario cliente.</p>
+      <p><strong>Detalles de tu cuenta:</strong></p>
+      <ul>
+        <li><strong>Nombre:</strong> ${dto.firstName} ${dto.lastName}</li>
+        <li><strong>Email:</strong> ${dto.email}</li>
+      </ul>
+      <p><strong>Instrucciones para el primer ingreso:</strong></p>
+      <ol>
+        <li>Accedé al sistema utilizando tu correo electrónico: <strong>${dto.email}</strong></li>
+        <li>Ingresá la contraseña que definiste durante el registro</li>
+        <li>Te recomendamos cambiar tu contraseña periódicamente para mayor seguridad</li>
+      </ol>
+      <p>Si tenés alguna duda o inconveniente, podés contactarte con el equipo de soporte.</p>
+      <p>Saludos cordiales,<br>Equipo de Programación Avanzada</p>
+    `;
+    this.mailerService.sendMail(
+      dto.email,
+      'Bienvenido al Sistema de Gestión de Reclamos',
+      welcomeMessage,
+    );
     return this.sanitize(user);
   }
 
