@@ -37,7 +37,9 @@ export class DashboardGerenteService implements IDashboardGerenteService {
     query: DashboardGerenteQueryDto,
   ): Promise<DashboardGerenteResponseDto> {
     this.logger.log('Obteniendo métricas del dashboard de gerente');
-    const { startDate, endDate, estado, proyectoId, topLimit = 10 } = query;
+    const { startDate, endDate, estado, proyectoId, tipoReclamoId, criticidad, topLimit = 10 } = query;
+    // Ensure topLimit is a number (query params come as strings)
+    const topLimitNumber = typeof topLimit === 'string' ? parseInt(topLimit, 10) : (topLimit ?? 10);
     const dateRange = getDateRange(startDate, endDate);
 
     // Build base match filter
@@ -45,10 +47,15 @@ export class DashboardGerenteService implements IDashboardGerenteService {
       deletedAt: null,
       ...buildDateMatch(startDate, endDate, undefined, 'createdAt'),
       ...buildObjectIdFilter('fkProyecto', proyectoId),
+      ...buildObjectIdFilter('fkTipoReclamo', tipoReclamoId),
     };
 
     if (estado) {
       baseMatch.estado = estado;
+    }
+
+    if (criticidad) {
+      baseMatch.criticidad = criticidad;
     }
 
     // 1. Workload by area
@@ -106,6 +113,8 @@ export class DashboardGerenteService implements IDashboardGerenteService {
           'reclamo.estado': { $in: finalStates },
           ...buildDateMatch(startDate, endDate, undefined, 'reclamo.createdAt'),
           ...buildObjectIdFilter('reclamo.fkProyecto', proyectoId),
+          ...buildObjectIdFilter('reclamo.fkTipoReclamo', tipoReclamoId),
+          ...(criticidad ? { 'reclamo.criticidad': criticidad } : {}),
         },
       },
       {
@@ -138,7 +147,7 @@ export class DashboardGerenteService implements IDashboardGerenteService {
         },
       },
       { $sort: { cantidadResueltos: -1 } },
-      { $limit: topLimit },
+      { $limit: topLimitNumber },
     ]);
 
     const topEmployeesByResolved: TopEmployeeByResolvedDto[] = topEmployeesByResolvedAgg.map((item) => ({
@@ -165,6 +174,8 @@ export class DashboardGerenteService implements IDashboardGerenteService {
           'reclamo.estado': { $in: finalStates },
           ...buildDateMatch(startDate, endDate, undefined, 'reclamo.createdAt'),
           ...buildObjectIdFilter('reclamo.fkProyecto', proyectoId),
+          ...buildObjectIdFilter('reclamo.fkTipoReclamo', tipoReclamoId),
+          ...(criticidad ? { 'reclamo.criticidad': criticidad } : {}),
         },
       },
       {
@@ -225,7 +236,7 @@ export class DashboardGerenteService implements IDashboardGerenteService {
         },
       },
       { $sort: { promedioDias: 1 } }, // Ascending (lower is better)
-      { $limit: topLimit },
+      { $limit: topLimitNumber },
     ]);
 
     const topEmployeesByEfficiency: TopEmployeeByEfficiencyDto[] = topEmployeesByEfficiencyAgg.map((item) => ({

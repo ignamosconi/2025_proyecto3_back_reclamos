@@ -4,6 +4,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsDateString, IsEnum, IsMongoId, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { EstadoReclamo } from 'src/reclamo/enums/estado.enum';
+import { Criticidad } from 'src/reclamo/enums/criticidad.enum';
 
 export class DashboardGerenteQueryDto {
   @ApiPropertyOptional({
@@ -37,6 +38,22 @@ export class DashboardGerenteQueryDto {
   @IsOptional()
   @IsMongoId()
   proyectoId?: string;
+
+  @ApiPropertyOptional({
+    description: 'ID del tipo de reclamo para filtrar',
+    example: '60c72b2f9c3f9a0015b67e7e',
+  })
+  @IsOptional()
+  @IsMongoId()
+  tipoReclamoId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Criticidad del reclamo para filtrar',
+    enum: Criticidad,
+  })
+  @IsOptional()
+  @IsEnum(Criticidad)
+  criticidad?: Criticidad;
 
   @ApiPropertyOptional({
     description: 'Cantidad de empleados a mostrar en los rankings (default: 10)',
