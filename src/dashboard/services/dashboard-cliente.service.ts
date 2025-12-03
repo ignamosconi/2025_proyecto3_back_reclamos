@@ -5,8 +5,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Reclamo } from 'src/reclamo/schemas/reclamo.schema';
 import { DashboardClienteQueryDto } from '../dto/dashboard-cliente-query.dto';
-import { DashboardClienteResponseDto, ClaimsPerProjectDto, ClaimsByStatusDto } from '../dto/dashboard-cliente-response.dto';
-import { IDashboardClienteService, IDASHBOARD_CLIENTE_SERVICE } from './interfaces/dashboard-cliente.service.interface';
+import {
+  DashboardClienteResponseDto,
+  ClaimsPerProjectDto,
+  ClaimsByStatusDto,
+} from '../dto/dashboard-cliente-response.dto';
+import {
+  IDashboardClienteService,
+  IDASHBOARD_CLIENTE_SERVICE,
+} from './interfaces/dashboard-cliente.service.interface';
 import { getDateRange } from '../helpers/date-helpers';
 import { buildDateMatch } from '../helpers/aggregation-helpers';
 import { EstadoReclamo } from 'src/reclamo/enums/estado.enum';
@@ -55,18 +62,22 @@ export class DashboardClienteService implements IDashboardClienteService {
       {
         $project: {
           proyectoId: { $toString: '$_id' },
-          proyectoNombre: { $ifNull: ['$proyecto.nombre', 'Proyecto Desconocido'] },
+          proyectoNombre: {
+            $ifNull: ['$proyecto.nombre', 'Proyecto Desconocido'],
+          },
           cantidad: 1,
         },
       },
       { $sort: { cantidad: -1 } },
     ]);
 
-    const claimsPerProject: ClaimsPerProjectDto[] = claimsPerProjectAgg.map((item) => ({
-      proyectoId: item.proyectoId,
-      proyectoNombre: item.proyectoNombre,
-      cantidad: item.cantidad,
-    }));
+    const claimsPerProject: ClaimsPerProjectDto[] = claimsPerProjectAgg.map(
+      (item) => ({
+        proyectoId: item.proyectoId,
+        proyectoNombre: item.proyectoNombre,
+        cantidad: item.cantidad,
+      }),
+    );
 
     // 2. Claims by status (filterable by project)
     const statusMatch = { ...baseMatch };
@@ -85,15 +96,17 @@ export class DashboardClienteService implements IDashboardClienteService {
       { $sort: { cantidad: -1 } },
     ]);
 
-    const claimsByStatus: ClaimsByStatusDto[] = claimsByStatusAgg.map((item) => ({
-      estado: item._id,
-      cantidad: item.cantidad,
-    }));
+    const claimsByStatus: ClaimsByStatusDto[] = claimsByStatusAgg.map(
+      (item) => ({
+        estado: item._id,
+        cantidad: item.cantidad,
+      }),
+    );
 
     // 3. Average resolution time (from creation to final state)
     // For final states, use updatedAt which reflects when the state was changed to final
     const finalStates = [EstadoReclamo.RESUELTO, EstadoReclamo.RECHAZADO];
-    
+
     const resolutionTimeAgg = await this.reclamoModel.aggregate([
       {
         $match: {
@@ -131,10 +144,15 @@ export class DashboardClienteService implements IDashboardClienteService {
 
     let averageResolutionTime = 0;
     if (resolutionTimeAgg.length > 0 && resolutionTimeAgg[0].count > 0) {
-      averageResolutionTime = resolutionTimeAgg[0].totalDays / resolutionTimeAgg[0].count;
-      this.logger.debug(`Resolution time calculated: ${averageResolutionTime.toFixed(2)} days from ${resolutionTimeAgg[0].count} claims`);
+      averageResolutionTime =
+        resolutionTimeAgg[0].totalDays / resolutionTimeAgg[0].count;
+      this.logger.debug(
+        `Resolution time calculated: ${averageResolutionTime.toFixed(2)} days from ${resolutionTimeAgg[0].count} claims`,
+      );
     } else {
-      this.logger.debug(`No resolution time data found. Claims in final states: ${JSON.stringify(resolutionTimeAgg)}`);
+      this.logger.debug(
+        `No resolution time data found. Claims in final states: ${JSON.stringify(resolutionTimeAgg)}`,
+      );
     }
 
     // Total claims count
@@ -152,4 +170,3 @@ export class DashboardClienteService implements IDashboardClienteService {
     };
   }
 }
-
